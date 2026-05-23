@@ -1,0 +1,97 @@
+/*
+ * Global design tokens for the chord suggester.
+ * Palette ported from the legacy "Hit me" app (sage green + cream).
+ * Fonts are injected by next/font as --font-sans / --font-serif (see layout.tsx).
+ */
+:root {
+  /* Palette */
+  --white: #f9f9f9;
+  --black: #313331;
+  --green: #83a085;
+  --green-dark: #5b885e;
+  --gray: #7e887c;
+  --gray-light: #c9cac9;
+  --gray-extra-light: #e4e1e1;
+  --dark: #5d665b;
+
+  /* Roles */
+  --primary: var(--green);
+  --secondary: var(--gray);
+  --highlight: var(--green-dark);
+
+  /* Backgrounds: light = input mode, deep = results/suggest mode */
+  --bg-input: linear-gradient(-45deg, var(--primary), var(--secondary));
+  --bg-results: linear-gradient(-45deg, #41504170, #2f3a2f);
+
+  /* Type */
+  --font-main: var(--font-sans), system-ui, sans-serif;
+  --font-display: var(--font-serif), Georgia, serif;
+  --font-weight: 400;
+  --font-weight-bold: 700;
+
+  /* Shape */
+  --radius: 4px;
+  --radius-med: 30px;
+  --radius-pill: 34px;
+  --radius-big: 55px;
+
+  /* Elevation */
+  --shadow-1: 0 -2px 16px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 -2px 8px rgba(0, 0, 0, 0.2);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.55, -0.26, 0.35, 1.66);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  /* The cream "mat" frame that surrounds the app, à la the legacy design. */
+  border: 3vw solid var(--white);
+  border-bottom: 0;
+  background: var(--bg-input);
+  color: var(--white);
+  font-family: var(--font-main);
+  font-weight: var(--font-weight);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  color: var(--white);
+}
+
+a {
+  color: var(--white);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,3 @@
+# Pre-commit gate: keep the toolchain green.
+# Fast because the theory engine is pure functions; adjust if it ever gets slow.
+npm run lint && npm run test:run
