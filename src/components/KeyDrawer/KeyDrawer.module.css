@@ -26,10 +26,35 @@
   transform: translateX(-105%);
   transition: transform 0.3s var(--ease-out);
   overflow-y: auto;
+  visibility: hidden;
   z-index: 21;
 }
 .drawerOpen {
   transform: translateX(0);
+  visibility: visible;
+}
+
+/* Wide screens: the drawer becomes a persistent, in-flow left column. */
+@media (min-width: 900px) {
+  .scrim {
+    display: none;
+  }
+  .drawer {
+    position: sticky;
+    top: 0;
+    left: auto;
+    bottom: auto;
+    align-self: flex-start;
+    flex: 0 0 300px;
+    height: 100vh;
+    transform: none;
+    visibility: visible;
+    border-radius: 0;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.15);
+  }
+  .close {
+    display: none;
+  }
 }
 
 .head {

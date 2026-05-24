@@ -1,8 +1,27 @@
+.layout {
+  min-height: 100vh;
+}
+
 .screen {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   transition: background 0.6s var(--ease-out);
+}
+
+/* Wide screens: dock the menu as a persistent left column beside the content. */
+@media (min-width: 900px) {
+  .layout {
+    display: flex;
+    align-items: stretch;
+  }
+  .screen {
+    flex: 1;
+    min-width: 0;
+  }
+  .menu {
+    display: none;
+  }
 }
 
 /* Light "input" canvas vs deeper "results" canvas — the legacy signature shift. */

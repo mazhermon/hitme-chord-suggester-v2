@@ -93,52 +93,55 @@ export function EditorScreen() {
   }
 
   return (
-    <div
-      ref={root}
-      className={`${styles.screen} ${results ? styles.results : styles.input}`}
-    >
-      <header className={styles.header}>
-        <button
-          className={styles.menu}
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Open menu"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      </header>
-
-      <main className={styles.canvas}>
-        {empty ? (
-          <div className={styles.intro}>
-            <h1 className={styles.introTitle}>Hit me</h1>
-            <p className={styles.introSub}>songwriting tool</p>
-            <p className={styles.hint}>
-              Enter some chord numbers to get started
-            </p>
-          </div>
-        ) : (
-          <ChordDisplay
-            chords={chords}
-            level={level}
-            resultsMode={results}
-            locked={state.slots.map((s) => s.locked)}
-            substituted={state.slots.map((s) => s.sub !== null)}
-            onSwap={(i) => dispatch({ type: 'swapChord', index: i })}
-            onPlay={handlePlayChord}
-            onCycleVoicing={handleCycleVoicing}
-            onToggleLock={(i) => dispatch({ type: 'toggleLock', index: i })}
-            onRevert={(i) => dispatch({ type: 'revertChord', index: i })}
-            removable
-            onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}
-          />
-        )}
-      </main>
-
-      <ChordDock onPlay={handlePlayAll} onSave={() => setSaveOpen(true)} />
-
+    <div className={styles.layout}>
       <KeyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      <div
+        ref={root}
+        className={`${styles.screen} ${results ? styles.results : styles.input}`}
+      >
+        <header className={styles.header}>
+          <button
+            className={styles.menu}
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open menu"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </header>
+
+        <main className={styles.canvas}>
+          {empty ? (
+            <div className={styles.intro}>
+              <h1 className={styles.introTitle}>Hit me</h1>
+              <p className={styles.introSub}>songwriting tool</p>
+              <p className={styles.hint}>
+                Enter some chord numbers to get started
+              </p>
+            </div>
+          ) : (
+            <ChordDisplay
+              chords={chords}
+              level={level}
+              resultsMode={results}
+              locked={state.slots.map((s) => s.locked)}
+              substituted={state.slots.map((s) => s.sub !== null)}
+              onSwap={(i) => dispatch({ type: 'swapChord', index: i })}
+              onPlay={handlePlayChord}
+              onCycleVoicing={handleCycleVoicing}
+              onToggleLock={(i) => dispatch({ type: 'toggleLock', index: i })}
+              onRevert={(i) => dispatch({ type: 'revertChord', index: i })}
+              removable
+              onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}
+            />
+          )}
+        </main>
+
+        <ChordDock onPlay={handlePlayAll} onSave={() => setSaveOpen(true)} />
+      </div>
+
       <SaveDialog
         open={saveOpen}
         onCancel={() => setSaveOpen(false)}

@@ -44,7 +44,6 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
       />
       <aside
         className={`${styles.drawer} ${open ? styles.drawerOpen : ''}`}
-        aria-hidden={!open}
         aria-label="Settings"
       >
         <header className={styles.head}>
