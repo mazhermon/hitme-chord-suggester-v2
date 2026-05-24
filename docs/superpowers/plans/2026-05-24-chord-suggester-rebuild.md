@@ -1,5 +1,9 @@
 # Chord Suggester Rebuild — Implementation Plan
 
+> **Historical snapshot.** The app has since grown well beyond this initial plan (genre
+> presets, planing, the slot model, lessons, piano diagrams, MIDI export, accessibility).
+> See **`docs/ARCHITECTURE.md`** for the current as-built state and decisions.
+
 > **For agentic workers:** This plan is executed **inline** in the current session
 > (single developer with full context; tightly shared types/design tokens make per-task
 > subagents counterproductive). Steps use `- [ ]` checkboxes. TDD for the pure engine;

@@ -43,8 +43,9 @@ Next.js 16 · React 19 · TypeScript (strict) · CSS Modules · `tonal` · `midi
 Web Audio API · Firebase (Firestore, optional) · Vitest · Playwright.
 
 The music-theory and audio logic live in pure, unit-tested modules under `src/lib/`; React is
-a thin layer on top. See `docs/superpowers/specs/` and `docs/superpowers/plans/` for the
-design spec and implementation plan.
+a thin layer on top. **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** is the as-built
+reference (module map, data model, key decisions, and gotchas); `docs/superpowers/specs` and
+`docs/superpowers/plans` hold the original point-in-time design snapshots.
 
 ## Develop
 
