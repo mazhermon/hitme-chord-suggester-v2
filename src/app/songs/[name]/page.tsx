@@ -48,6 +48,7 @@ export default function SongPage() {
               }
               resultsMode
               showGuitar
+              showPiano
               onPlay={(chord) =>
                 playChord(chord, {
                   level: song.extensions

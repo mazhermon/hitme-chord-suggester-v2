@@ -30,6 +30,7 @@ export interface EditorState {
   bpm: number
   muted: boolean
   showGuitar: boolean
+  showPiano: boolean
 }
 
 function applyStyle(style: Style) {
@@ -48,6 +49,7 @@ export const initialEditorState: EditorState = {
   bpm: 90,
   muted: false,
   showGuitar: false,
+  showPiano: false,
   ...applyStyle(STYLES.jazz),
 }
 
@@ -71,6 +73,7 @@ export type EditorAction =
   | { type: 'setBpm'; bpm: number }
   | { type: 'toggleMute' }
   | { type: 'toggleGuitar' }
+  | { type: 'togglePiano' }
   | {
       type: 'loadSong'
       song: {
@@ -268,6 +271,9 @@ export function editorReducer(
 
     case 'toggleGuitar':
       return { ...state, showGuitar: !state.showGuitar }
+
+    case 'togglePiano':
+      return { ...state, showPiano: !state.showPiano }
 
     case 'loadSong':
       return {

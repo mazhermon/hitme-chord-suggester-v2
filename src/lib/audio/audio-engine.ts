@@ -15,6 +15,9 @@ let masterGain: GainNode | null = null
 let muted = false
 const MASTER_LEVEL = 0.8
 
+/** Seconds between notes when a chord is arpeggiated (shared with the piano UI). */
+export const ARPEGGIO_STEP = 0.16
+
 /** Lazily create (and resume) the AudioContext. Call from a user gesture. */
 export function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -100,7 +103,7 @@ export function playChord(
   })
   if (options.arpeggio) {
     // Spell the chord out, low to high.
-    const step = options.strum ?? 0.16
+    const step = options.strum ?? ARPEGGIO_STEP
     const base = options.when ?? 0
     freqs.forEach((f, i) =>
       playFrequencies([f], {

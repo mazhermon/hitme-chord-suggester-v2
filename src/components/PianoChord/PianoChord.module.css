@@ -1,0 +1,26 @@
+.piano {
+  display: block;
+}
+
+.white {
+  fill: var(--white);
+  stroke: rgba(47, 58, 47, 0.4);
+  stroke-width: 0.5;
+}
+
+.black {
+  fill: #26302a;
+}
+
+.chordTone {
+  fill: var(--highlight-chord);
+  stroke: rgba(47, 58, 47, 0.4);
+  stroke-width: 0.5;
+}
+
+.sounding {
+  fill: var(--highlight-active);
+  stroke: rgba(47, 58, 47, 0.4);
+  stroke-width: 0.5;
+  transition: fill 0.05s linear;
+}

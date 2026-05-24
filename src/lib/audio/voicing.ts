@@ -53,10 +53,11 @@ function sorted(m: number[]): number[] {
 }
 
 /**
- * Turn a chord into a set of frequencies. Chord tones come from tonal; octaves
- * rise so the base voicing reads low-to-high, then a voicing transform is applied.
+ * Turn a chord into a set of MIDI note numbers. Chord tones come from tonal;
+ * octaves rise so the base voicing reads low-to-high, then a voicing transform
+ * is applied. Shared by the audio synth and the piano/keyboard diagram.
  */
-export function chordToFrequencies(
+export function chordToMidi(
   chord: VoiceableChord,
   options: VoiceOptions = {},
 ): number[] {
@@ -82,5 +83,13 @@ export function chordToFrequencies(
 
   const transform =
     VOICINGS[((voicing % VOICINGS.length) + VOICINGS.length) % VOICINGS.length]
-  return transform(midi).map(midiToFreq)
+  return transform(midi)
+}
+
+/** Turn a chord into a set of frequencies (Hz) — the voiced MIDI notes as pitches. */
+export function chordToFrequencies(
+  chord: VoiceableChord,
+  options: VoiceOptions = {},
+): number[] {
+  return chordToMidi(chord, options).map(midiToFreq)
 }

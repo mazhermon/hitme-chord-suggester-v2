@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import type { Chord } from '@/lib/theory/types'
 import { romanForDegree } from '@/lib/theory/nashville'
 import {
@@ -7,9 +8,11 @@ import {
   renderSymbol,
   type ExtensionLevel,
 } from '@/lib/theory/extensions'
-import { VOICING_NAMES } from '@/lib/audio/voicing'
+import { VOICING_NAMES, chordToMidi } from '@/lib/audio/voicing'
+import { ARPEGGIO_STEP } from '@/lib/audio/audio-engine'
 import { findGuitarShape } from '@/lib/guitar/voicing'
 import { ChordDiagram } from '@/components/ChordDiagram/ChordDiagram'
+import { PianoChord } from '@/components/PianoChord/PianoChord'
 import styles from './ChordDisplay.module.css'
 
 interface ChordDisplayProps {
@@ -19,6 +22,8 @@ interface ChordDisplayProps {
   resultsMode?: boolean
   /** Show a guitar chord diagram under each chord. */
   showGuitar?: boolean
+  /** Show a piano keyboard diagram under each chord. */
+  showPiano?: boolean
   /** Per-index flags for editor controls. */
   locked?: boolean[]
   substituted?: boolean[]
@@ -38,6 +43,7 @@ export function ChordDisplay({
   level = 'seventh',
   resultsMode = false,
   showGuitar = false,
+  showPiano = false,
   locked,
   substituted,
   onSwap,
@@ -49,6 +55,47 @@ export function ChordDisplay({
   removable = false,
   onRemove,
 }: ChordDisplayProps) {
+  // Which chord is playing + the notes sounding so far, to light the piano in time.
+  const [sounding, setSounding] = useState<{
+    index: number
+    notes: number[]
+  } | null>(null)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  useEffect(() => {
+    const current = timers.current
+    return () => current.forEach(clearTimeout)
+  }, [])
+
+  function play(chord: Chord, index: number) {
+    onPlay?.(chord, index)
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    const midi = [
+      ...chordToMidi(chord, { level, voicing: chord.voicing }),
+    ].sort((a, b) => a - b)
+    setSounding({ index, notes: [] })
+    midi.forEach((n, i) => {
+      timers.current.push(
+        setTimeout(
+          () =>
+            setSounding((prev) =>
+              prev && prev.index === index
+                ? { index, notes: [...prev.notes, n] }
+                : prev,
+            ),
+          i * ARPEGGIO_STEP * 1000,
+        ),
+      )
+    })
+    timers.current.push(
+      setTimeout(
+        () => setSounding(null),
+        midi.length * ARPEGGIO_STEP * 1000 + 450,
+      ),
+    )
+  }
+
   const compact = chords.length > 4
   const cls = [
     styles.list,
@@ -103,7 +150,7 @@ export function ChordDisplay({
                   className={styles.ctrl}
                   aria-label={`Play ${symbol}`}
                   title="Play"
-                  onClick={() => onPlay(chord, i)}
+                  onClick={() => play(chord, i)}
                 >
                   ▶
                 </button>
@@ -160,6 +207,14 @@ export function ChordDisplay({
 
             {showGuitar && (
               <ChordDiagram {...findGuitarShape(chord)} name={symbol} />
+            )}
+
+            {showPiano && (
+              <PianoChord
+                notes={chordToMidi(chord, { level, voicing: chord.voicing })}
+                active={sounding?.index === i ? sounding.notes : undefined}
+                name={symbol}
+              />
             )}
 
             {removable && (

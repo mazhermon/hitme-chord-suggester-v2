@@ -136,6 +136,7 @@ export function EditorScreen() {
               level={level}
               resultsMode={results}
               showGuitar={state.showGuitar}
+              showPiano={state.showPiano}
               locked={state.slots.map((s) => s.locked)}
               substituted={state.slots.map((s) => s.sub !== null)}
               onSwap={(i) => dispatch({ type: 'swapChord', index: i })}

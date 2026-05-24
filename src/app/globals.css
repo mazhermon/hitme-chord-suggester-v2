@@ -22,6 +22,10 @@
   --green-deeper: #2f4636;
   --panel: #3f5a43;
 
+  /* Diagram highlights: chord tones vs. the note currently sounding. */
+  --highlight-chord: #6fae9f; /* teal-sage — "play these" */
+  --highlight-active: #e6a23c; /* amber — "sounding now" */
+
   /* Roles */
   --primary: var(--green);
   --secondary: var(--gray);

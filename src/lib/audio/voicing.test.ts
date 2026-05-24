@@ -1,4 +1,4 @@
-import { chordToFrequencies, VOICING_NAMES } from './voicing'
+import { chordToFrequencies, chordToMidi, VOICING_NAMES } from './voicing'
 
 describe('chordToFrequencies', () => {
   it('voices a maj7 as four ascending frequencies near the root octave', () => {
@@ -21,6 +21,20 @@ describe('chordToFrequencies', () => {
 
   it('voices a triad as three notes', () => {
     expect(chordToFrequencies({ root: 'C', quality: 'maj' })).toHaveLength(3)
+  })
+})
+
+describe('chordToMidi', () => {
+  it('voices a maj7 as ascending MIDI notes from C4', () => {
+    expect(chordToMidi({ root: 'C', quality: 'maj7' })).toEqual([
+      60, 64, 67, 71,
+    ])
+  })
+
+  it('honours the extension level (min11 = six notes)', () => {
+    expect(
+      chordToMidi({ root: 'C', quality: 'min7' }, { level: 'eleventh' }),
+    ).toHaveLength(6)
   })
 })
 
