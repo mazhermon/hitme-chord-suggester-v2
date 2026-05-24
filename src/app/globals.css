@@ -94,6 +94,19 @@ button {
   font-family: inherit;
 }
 
+/* Visually hidden but available to assistive tech. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /*
  * Baseline visible keyboard-focus indicator for any interactive element that
  * doesn't define its own (low specificity via :where so components can override).

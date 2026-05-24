@@ -19,15 +19,34 @@ export function SaveDialog({
 }: SaveDialogProps) {
   const [name, setName] = useState(defaultName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLFormElement>(null)
 
-  // Escape to close, focus the input on open, and restore focus on close.
+  // Escape to close, focus the input on open, trap Tab, restore focus on close.
   useEffect(() => {
     if (!open) return
     const previouslyFocused = document.activeElement as HTMLElement | null
     inputRef.current?.focus()
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') {
+        onCancel()
+        return
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return
+      const focusable =
+        dialogRef.current.querySelectorAll<HTMLElement>('input, button')
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
+
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
@@ -46,6 +65,7 @@ export function SaveDialog({
   return (
     <div className={styles.scrim} onClick={onCancel}>
       <form
+        ref={dialogRef}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"

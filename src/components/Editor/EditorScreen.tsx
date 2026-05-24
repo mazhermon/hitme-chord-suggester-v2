@@ -107,6 +107,7 @@ export function EditorScreen() {
         className={`${styles.screen} ${results ? styles.results : styles.input}`}
       >
         <header className={styles.header}>
+          <h1 className="sr-only">Hit me — chord progression editor</h1>
           <button
             className={styles.menu}
             onClick={() => setDrawerOpen(true)}
@@ -121,7 +122,9 @@ export function EditorScreen() {
         <main className={styles.canvas}>
           {empty ? (
             <div className={styles.intro}>
-              <h1 className={styles.introTitle}>Hit me</h1>
+              <p className={styles.introTitle} aria-hidden="true">
+                Hit me
+              </p>
               <p className={styles.introSub}>songwriting tool</p>
               <p className={styles.hint}>
                 Enter some chord numbers to get started

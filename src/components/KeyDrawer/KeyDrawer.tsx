@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { MAJOR_TONICS, MINOR_TONICS } from '@/lib/theory/keys'
 import { STRATEGIES } from '@/lib/theory/substitutions'
@@ -26,6 +27,18 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
   const { state, dispatch } = useEditor()
   const tonics = state.key.mode === 'major' ? MAJOR_TONICS : MINOR_TONICS
   const env = state.envelope
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  // When opened as an overlay (small screens), move focus in + close on Escape.
+  useEffect(() => {
+    if (!open) return
+    closeRef.current?.focus()
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
 
   function changeMode(mode: Mode) {
     const list = mode === 'major' ? MAJOR_TONICS : MINOR_TONICS
@@ -49,6 +62,7 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
         <header className={styles.head}>
           <h2 className={styles.title}>Menu</h2>
           <button
+            ref={closeRef}
             className={styles.close}
             onClick={onClose}
             aria-label="Close menu"
