@@ -75,7 +75,9 @@ export function EditorScreen() {
   }
 
   function handleExportMidi() {
-    const bytes = progressionToMidi(chords, { bpm: state.bpm, level })
+    // No tempo written — notes are in musical beats, so they land correctly at
+    // the user's project tempo without overriding it.
+    const bytes = progressionToMidi(chords, { level })
     downloadMidi(bytes, 'hitme-progression')
   }
 

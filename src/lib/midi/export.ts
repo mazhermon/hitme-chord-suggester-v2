@@ -5,7 +5,6 @@ import type { Chord } from '../theory/types'
 import type { ExtensionLevel } from '../theory/extensions'
 
 export interface MidiOptions {
-  bpm?: number
   /** Beats each chord lasts (default 2 = a half note at 4/4). */
   beatsPerChord?: number
   level?: ExtensionLevel
@@ -20,16 +19,19 @@ function durationForBeats(beats: number): string {
 
 /**
  * Build a Standard MIDI File (one track) from a progression: each chord is a
- * block of notes lasting `beatsPerChord`, played in sequence at `bpm`. Returns
- * the raw .mid bytes — drop the file into Logic/Ableton (drag-in or Import MIDI).
+ * block of notes lasting `beatsPerChord`, played in sequence. Returns the raw
+ * .mid bytes — drop the file into Logic/Ableton (drag-in or Import MIDI).
+ *
+ * Deliberately writes NO tempo event: note positions are stored in musical beats
+ * (ticks), so the chords land on the right beats at whatever tempo the user's
+ * project is set to, and there's no tempo to override their project.
  */
 export function progressionToMidi(
   chords: Chord[],
   options: MidiOptions = {},
 ): Uint8Array {
-  const { bpm = 90, beatsPerChord = 2, level } = options
+  const { beatsPerChord = 2, level } = options
   const track = new MidiWriter.Track()
-  track.setTempo(bpm)
   const duration = durationForBeats(beatsPerChord)
 
   for (const chord of chords) {
