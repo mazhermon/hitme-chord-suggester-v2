@@ -7,12 +7,13 @@ const cMajor: KeyContext = { tonic: 'C', mode: 'major' }
 const progression = [0, 1, 4].map((d) => realizeChord(d, cMajor))
 
 describe('substitution registry', () => {
-  it('registers the four strategies', () => {
+  it('registers all five strategies', () => {
     expect(STRATEGIES.map((s) => s.id)).toEqual([
       'modal-interchange',
       'secondary-dominant',
       'tritone',
       'diatonic-third',
+      'suspension',
     ])
   })
 })
@@ -29,7 +30,6 @@ describe('suggestForProgression', () => {
       homeBias: 0,
       rng: () => 0,
     })
-    // I has no secondary dominant; ii→A7; V→D7
     expect(result.map((c) => c.symbol)).toEqual(['Cmaj7', 'A7', 'D7'])
   })
 
@@ -39,12 +39,24 @@ describe('suggestForProgression', () => {
       homeBias: 0,
       rng: () => 0,
     })
-    // only the dominant G7 has a tritone sub (Db7)
     expect(result.map((c) => c.symbol)).toEqual(['Cmaj7', 'Dmin7', 'Db7'])
   })
 
+  it('respects strategy weights (a zero-weighted strategy is never chosen)', () => {
+    const [ii] = [realizeChord(1, cMajor)] // Dmin7
+    const result = suggestForProgression([ii], cMajor, {
+      enabled: ['secondary-dominant', 'diatonic-third'],
+      weights: { 'secondary-dominant': 0, 'diatonic-third': 1 },
+      homeBias: 0,
+      rng: () => 0,
+    })
+    // secondary-dominant (A7) is weighted out → first diatonic-third candidate
+    expect(result[0].symbol).toBe('Fmaj7')
+  })
+
   it('returns one chord per input position', () => {
-    const result = suggestForProgression(progression, cMajor)
-    expect(result).toHaveLength(progression.length)
+    expect(suggestForProgression(progression, cMajor)).toHaveLength(
+      progression.length,
+    )
   })
 })

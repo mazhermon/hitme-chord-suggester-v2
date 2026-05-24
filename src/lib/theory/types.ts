@@ -11,6 +11,8 @@ export type Quality =
   | 'min' // minor triad
   | 'dim'
   | 'aug'
+  | 'sus2'
+  | 'sus4'
 
 export type Mode = 'major' | 'minor'
 
@@ -46,6 +48,8 @@ export const QUALITY_SUFFIX: Record<Quality, string> = {
   min: 'min',
   dim: 'dim',
   aug: 'aug',
+  sus2: 'sus2',
+  sus4: 'sus4',
 }
 
 /** Maps our Quality to the tonal chord-type name used for voicing/note lookup. */
@@ -59,4 +63,6 @@ export const QUALITY_TONAL: Record<Quality, string> = {
   min: 'm',
   dim: 'dim',
   aug: 'aug',
+  sus2: 'sus2',
+  sus4: 'sus4',
 }

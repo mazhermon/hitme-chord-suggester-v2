@@ -1,11 +1,10 @@
-import { chordToFrequencies } from './voicing'
+import { chordToFrequencies, VOICING_NAMES } from './voicing'
 
 describe('chordToFrequencies', () => {
   it('voices a maj7 as four ascending frequencies near the root octave', () => {
     const freqs = chordToFrequencies({ root: 'C', quality: 'maj7' })
     expect(freqs).toHaveLength(4)
     expect(freqs[0]).toBeCloseTo(261.626, 1) // C4
-    // strictly ascending (a clean low-to-high voicing)
     for (let i = 1; i < freqs.length; i++) {
       expect(freqs[i]).toBeGreaterThan(freqs[i - 1])
     }
@@ -22,5 +21,63 @@ describe('chordToFrequencies', () => {
 
   it('voices a triad as three notes', () => {
     expect(chordToFrequencies({ root: 'C', quality: 'maj' })).toHaveLength(3)
+  })
+})
+
+describe('chordToFrequencies with extension level', () => {
+  it('voices a minor 11th as six notes (deep-house texture)', () => {
+    const freqs = chordToFrequencies(
+      { root: 'C', quality: 'min7' },
+      { level: 'eleventh' },
+    )
+    expect(freqs).toHaveLength(6) // C Eb G Bb D F
+  })
+
+  it('reduces a seventh quality to three notes at triad level', () => {
+    expect(
+      chordToFrequencies({ root: 'C', quality: 'maj7' }, { level: 'triad' }),
+    ).toHaveLength(3)
+  })
+})
+
+describe('voicing variants', () => {
+  it('exposes a list of named voicings', () => {
+    expect(VOICING_NAMES.length).toBeGreaterThan(1)
+  })
+
+  it('keeps the note count across voicings', () => {
+    const close = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: 0 },
+    )
+    const inv = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: 1 },
+    )
+    expect(inv).toHaveLength(close.length)
+  })
+
+  it('first inversion lifts the lowest note above the close voicing', () => {
+    const close = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: 0 },
+    )
+    const inv = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: 1 },
+    )
+    expect(Math.min(...inv)).toBeGreaterThan(Math.min(...close))
+  })
+
+  it('wraps the voicing index around the available voicings', () => {
+    const close = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: 0 },
+    )
+    const wrapped = chordToFrequencies(
+      { root: 'C', quality: 'maj7' },
+      { voicing: VOICING_NAMES.length },
+    )
+    expect(wrapped).toEqual(close)
   })
 })
