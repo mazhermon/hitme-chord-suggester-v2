@@ -7,13 +7,14 @@ const cMajor: KeyContext = { tonic: 'C', mode: 'major' }
 const progression = [0, 1, 4].map((d) => realizeChord(d, cMajor))
 
 describe('substitution registry', () => {
-  it('registers all five strategies', () => {
+  it('registers all strategies', () => {
     expect(STRATEGIES.map((s) => s.id)).toEqual([
       'modal-interchange',
       'secondary-dominant',
       'tritone',
       'diatonic-third',
       'suspension',
+      'planing',
     ])
   })
 })

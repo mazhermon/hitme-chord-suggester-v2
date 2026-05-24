@@ -6,7 +6,7 @@ import { displayChords } from '@/state/editor'
 
 function Peek() {
   const { state } = useEditor()
-  return <output data-testid="count">{state.userChords.length}</output>
+  return <output data-testid="count">{state.slots.length}</output>
 }
 
 function setup(props?: Partial<Parameters<typeof ChordDock>[0]>) {

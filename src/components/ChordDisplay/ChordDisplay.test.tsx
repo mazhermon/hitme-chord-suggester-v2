@@ -17,11 +17,44 @@ describe('ChordDisplay', () => {
     expect(screen.getAllByText('diatonic')).toHaveLength(2)
   })
 
-  it('plays a chord when its cluster is clicked', async () => {
-    const onChordClick = vi.fn()
-    render(<ChordDisplay chords={chords} onChordClick={onChordClick} />)
-    await userEvent.click(screen.getByRole('button', { name: /Cmaj7/ }))
-    expect(onChordClick).toHaveBeenCalledWith(chords[0], 0)
+  it('swaps a chord when its cluster is clicked', async () => {
+    const onSwap = vi.fn()
+    render(<ChordDisplay chords={chords} onSwap={onSwap} />)
+    await userEvent.click(screen.getByRole('button', { name: /Swap Cmaj7/ }))
+    expect(onSwap).toHaveBeenCalledWith(0)
+  })
+
+  it('plays a chord via its play control', async () => {
+    const onPlay = vi.fn()
+    render(<ChordDisplay chords={chords} onPlay={onPlay} />)
+    await userEvent.click(screen.getByRole('button', { name: /Play Cmaj7/ }))
+    expect(onPlay).toHaveBeenCalledWith(chords[0], 0)
+  })
+
+  it('toggles a lock on a chord', async () => {
+    const onToggleLock = vi.fn()
+    render(
+      <ChordDisplay
+        chords={chords}
+        locked={[false, false]}
+        onToggleLock={onToggleLock}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /Lock Cmaj7/ }))
+    expect(onToggleLock).toHaveBeenCalledWith(0)
+  })
+
+  it('reverts a substituted chord', async () => {
+    const onRevert = vi.fn()
+    render(
+      <ChordDisplay
+        chords={chords}
+        substituted={[true, false]}
+        onRevert={onRevert}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /Revert Cmaj7/ }))
+    expect(onRevert).toHaveBeenCalledWith(0)
   })
 
   it('shows a remove control when removable', async () => {

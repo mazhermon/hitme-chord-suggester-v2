@@ -123,9 +123,14 @@ export function EditorScreen() {
             chords={chords}
             level={level}
             resultsMode={results}
-            onChordClick={handlePlayChord}
+            locked={state.slots.map((s) => s.locked)}
+            substituted={state.slots.map((s) => s.sub !== null)}
+            onSwap={(i) => dispatch({ type: 'swapChord', index: i })}
+            onPlay={handlePlayChord}
             onCycleVoicing={handleCycleVoicing}
-            removable={!results}
+            onToggleLock={(i) => dispatch({ type: 'toggleLock', index: i })}
+            onRevert={(i) => dispatch({ type: 'revertChord', index: i })}
+            removable
             onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}
           />
         )}

@@ -43,7 +43,7 @@ export default function SongPage() {
             <ChordDisplay
               chords={song.chords}
               resultsMode
-              onChordClick={(chord) => playChord(chord)}
+              onPlay={(chord) => playChord(chord)}
             />
           </div>
           <div className={styles.songActions}>

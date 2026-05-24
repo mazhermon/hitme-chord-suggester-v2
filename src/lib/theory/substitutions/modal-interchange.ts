@@ -20,6 +20,8 @@ export const modalInterchange: SubstitutionStrategy = {
 
     MODE_NAMES.forEach((modeName, modeIndex) => {
       if (modeIndex === home) return
+      // Locrian borrowings are very rare in practice — skip them.
+      if (modeName === 'locrian') return
       const scale = Scale.get(`${key.tonic} ${modeName}`).notes
       const root = scale[chord.degree]
       if (!root) return

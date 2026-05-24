@@ -100,10 +100,16 @@ export const STYLES: Record<StyleId, Style> = {
   house: {
     id: 'house',
     label: 'House',
-    description: 'Modal minor pads, lush 9ths, long release.',
-    enabledStrategies: ['modal-interchange', 'diatonic-third', 'suspension'],
+    description: 'Modal minor pads, planed stabs, lush 9ths, long release.',
+    enabledStrategies: [
+      'modal-interchange',
+      'planing',
+      'diatonic-third',
+      'suspension',
+    ],
     weights: {
       'modal-interchange': 3,
+      planing: 3,
       'diatonic-third': 1,
       suspension: 1,
     },

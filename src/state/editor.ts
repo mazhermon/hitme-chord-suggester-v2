@@ -1,9 +1,6 @@
 import type { Chord, KeyContext } from '@/lib/theory/types'
 import { realizeChord } from '@/lib/theory/chords'
-import {
-  suggestForProgression,
-  type SuggestOptions,
-} from '@/lib/theory/substitutions'
+import { candidatesFor, pickCandidate } from '@/lib/theory/substitutions'
 import { STYLES, type Style, type StyleId } from '@/lib/theory/styles'
 import {
   flagsFromLevel,
@@ -15,13 +12,16 @@ import { type EnvelopeSettings } from '@/lib/audio/envelope'
 
 export type Extension = keyof ExtensionFlags
 
+/** One position in the progression: its diatonic chord, an optional swap, and a lock. */
+export interface ChordSlot {
+  base: Chord
+  sub: Chord | null
+  locked: boolean
+}
+
 export interface EditorState {
   key: KeyContext
-  /** The diatonic progression the user entered (by Nashville degree). */
-  userChords: Chord[]
-  /** Substitution results, or null while in input mode. */
-  suggested: Chord[] | null
-  /** Active genre preset. */
+  slots: ChordSlot[]
   style: StyleId
   enabledStrategies: string[]
   weights: Record<string, number>
@@ -31,7 +31,6 @@ export interface EditorState {
   muted: boolean
 }
 
-/** Derive the harmony/sound config that a style preset implies. */
 function applyStyle(style: Style) {
   return {
     style: style.id,
@@ -44,18 +43,23 @@ function applyStyle(style: Style) {
 
 export const initialEditorState: EditorState = {
   key: { tonic: 'C', mode: 'major' },
-  userChords: [],
-  suggested: null,
+  slots: [],
   bpm: 90,
   muted: false,
   ...applyStyle(STYLES.jazz),
 }
 
+/** Max chords changed by a single "Suggest". */
+const MAX_SUBSTITUTIONS = 2
+
 export type EditorAction =
   | { type: 'addChord'; degree: number }
   | { type: 'removeChordAt'; index: number }
   | { type: 'reset' }
-  | { type: 'suggest'; options?: SuggestOptions }
+  | { type: 'suggest'; rng?: () => number; max?: number }
+  | { type: 'swapChord'; index: number; rng?: () => number }
+  | { type: 'revertChord'; index: number }
+  | { type: 'toggleLock'; index: number }
   | { type: 'setKey'; key: KeyContext }
   | { type: 'setStyle'; style: StyleId }
   | { type: 'toggleStrategy'; id: string }
@@ -66,6 +70,52 @@ export type EditorAction =
   | { type: 'toggleMute' }
   | { type: 'loadSong'; song: { key: KeyContext; chords: Chord[] } }
 
+function shown(slot: ChordSlot): Chord {
+  return slot.sub ?? slot.base
+}
+
+function pickDistinct<T>(items: T[], count: number, rng: () => number): T[] {
+  const pool = [...items]
+  const out: T[] = []
+  while (out.length < count && pool.length > 0) {
+    const i = Math.min(Math.floor(rng() * pool.length), pool.length - 1)
+    out.push(pool.splice(i, 1)[0])
+  }
+  return out
+}
+
+/** Re-roll: keep locked slots, reset the rest to diatonic, then substitute 1–2. */
+function suggestSlots(
+  state: EditorState,
+  rng: () => number,
+  max: number,
+): ChordSlot[] {
+  const { key, enabledStrategies, weights } = state
+  const cleared = state.slots.map((s) => (s.locked ? s : { ...s, sub: null }))
+  const prog = cleared.map(shown)
+
+  const eligible: number[] = []
+  cleared.forEach((slot, i) => {
+    if (slot.locked) return
+    if (candidatesFor(slot.base, key, prog, i, enabledStrategies).length > 0) {
+      eligible.push(i)
+    }
+  })
+  if (eligible.length === 0) return cleared
+
+  const desired = rng() < 0.45 ? 1 : 2
+  const count = Math.min(desired, max, eligible.length)
+  const chosen = pickDistinct(eligible, Math.max(1, count), rng)
+
+  const next = [...cleared]
+  for (const i of chosen) {
+    const cands = candidatesFor(next[i].base, key, prog, i, enabledStrategies)
+    const sub = pickCandidate(cands, weights, rng())
+    if (sub) next[i] = { ...next[i], sub }
+  }
+  return next
+}
+
 export function editorReducer(
   state: EditorState,
   action: EditorAction,
@@ -74,41 +124,86 @@ export function editorReducer(
     case 'addChord':
       return {
         ...state,
-        userChords: [
-          ...state.userChords,
-          realizeChord(action.degree, state.key),
+        slots: [
+          ...state.slots,
+          {
+            base: realizeChord(action.degree, state.key),
+            sub: null,
+            locked: false,
+          },
         ],
-        suggested: null,
       }
 
     case 'removeChordAt':
       return {
         ...state,
-        userChords: state.userChords.filter((_, i) => i !== action.index),
-        suggested: null,
+        slots: state.slots.filter((_, i) => i !== action.index),
       }
 
     case 'reset':
-      return { ...state, userChords: [], suggested: null }
+      return { ...state, slots: [] }
 
     case 'suggest':
       return {
         ...state,
-        suggested: suggestForProgression(state.userChords, state.key, {
-          enabled: state.enabledStrategies,
-          weights: state.weights,
-          ...action.options,
-        }),
+        slots: suggestSlots(
+          state,
+          action.rng ?? Math.random,
+          action.max ?? MAX_SUBSTITUTIONS,
+        ),
+      }
+
+    case 'swapChord': {
+      const slot = state.slots[action.index]
+      if (!slot || slot.locked) return state
+      const prog = state.slots.map(shown)
+      const cands = candidatesFor(
+        slot.base,
+        state.key,
+        prog,
+        action.index,
+        state.enabledStrategies,
+      )
+      const sub = pickCandidate(
+        cands,
+        state.weights,
+        (action.rng ?? Math.random)(),
+      )
+      if (!sub) return state
+      return {
+        ...state,
+        slots: state.slots.map((s, i) =>
+          i === action.index ? { ...s, sub } : s,
+        ),
+      }
+    }
+
+    case 'revertChord':
+      return {
+        ...state,
+        slots: state.slots.map((s, i) =>
+          i === action.index && !s.locked ? { ...s, sub: null } : s,
+        ),
+      }
+
+    case 'toggleLock':
+      return {
+        ...state,
+        slots: state.slots.map((s, i) =>
+          i === action.index ? { ...s, locked: !s.locked } : s,
+        ),
       }
 
     case 'setKey':
       return {
         ...state,
         key: action.key,
-        userChords: state.userChords.map((c) =>
-          realizeChord(c.degree, action.key),
-        ),
-        suggested: null,
+        // Re-spell the diatonic bases into the new key; subs no longer apply.
+        slots: state.slots.map((s) => ({
+          base: realizeChord(s.base.degree, action.key),
+          sub: null,
+          locked: s.locked,
+        })),
       }
 
     case 'setStyle':
@@ -140,13 +235,15 @@ export function editorReducer(
     }
 
     case 'cycleVoicing': {
-      const bump = (chords: Chord[]) =>
-        chords.map((c, i) =>
-          i === action.index ? { ...c, voicing: (c.voicing ?? 0) + 1 } : c,
-        )
-      return state.suggested
-        ? { ...state, suggested: bump(state.suggested) }
-        : { ...state, userChords: bump(state.userChords) }
+      return {
+        ...state,
+        slots: state.slots.map((s, i) => {
+          if (i !== action.index) return s
+          const target = s.sub ?? s.base
+          const voiced = { ...target, voicing: (target.voicing ?? 0) + 1 }
+          return s.sub ? { ...s, sub: voiced } : { ...s, base: voiced }
+        }),
+      }
     }
 
     case 'setEnvelope':
@@ -162,8 +259,11 @@ export function editorReducer(
       return {
         ...state,
         key: action.song.key,
-        userChords: action.song.chords,
-        suggested: null,
+        slots: action.song.chords.map((c) => ({
+          base: c,
+          sub: null,
+          locked: false,
+        })),
       }
 
     default:
@@ -171,14 +271,14 @@ export function editorReducer(
   }
 }
 
-/** Chords currently on screen: suggestions if present, else the user's input. */
+/** Chords currently on screen (a swap if present, else the diatonic base). */
 export function displayChords(state: EditorState): Chord[] {
-  return state.suggested ?? state.userChords
+  return state.slots.map(shown)
 }
 
-/** True when showing suggestion results (the "dark" canvas state). */
+/** True when at least one chord has been substituted (the "dark" canvas state). */
 export function isResultsMode(state: EditorState): boolean {
-  return state.suggested !== null
+  return state.slots.some((s) => s.sub !== null)
 }
 
 /** The current extension level derived from the cumulative flags. */

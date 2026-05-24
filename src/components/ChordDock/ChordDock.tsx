@@ -15,7 +15,6 @@ interface ChordDockProps {
 export function ChordDock({ onPlay, onSave }: ChordDockProps) {
   const { state, dispatch } = useEditor()
   const chords = displayChords(state)
-  const hasInput = state.userChords.length > 0
   const hasChords = chords.length > 0
 
   return (
@@ -36,7 +35,7 @@ export function ChordDock({ onPlay, onSave }: ChordDockProps) {
       <div className={styles.actions}>
         <Button
           onClick={() => dispatch({ type: 'suggest' })}
-          disabled={!hasInput}
+          disabled={!hasChords}
         >
           Suggest
         </Button>

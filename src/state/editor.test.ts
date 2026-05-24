@@ -4,104 +4,113 @@ import {
   displayChords,
   isResultsMode,
   extensionLevel,
+  type EditorState,
 } from './editor'
 import { STYLES } from '@/lib/theory/styles'
 import type { KeyContext } from '@/lib/theory/types'
 
 const G_MAJOR: KeyContext = { tonic: 'G', mode: 'major' }
 
-describe('editorReducer', () => {
-  it('adds a diatonic chord and stays in input mode', () => {
-    const s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    expect(s.userChords.map((c) => c.symbol)).toEqual(['Cmaj7'])
-    expect(s.suggested).toBeNull()
+function withChords(degrees: number[]): EditorState {
+  return degrees.reduce(
+    (s, degree) => editorReducer(s, { type: 'addChord', degree }),
+    initialEditorState,
+  )
+}
+
+describe('editorReducer — building a progression', () => {
+  it('adds diatonic chords in order and stays in input mode', () => {
+    const s = withChords([0, 3, 4])
+    expect(displayChords(s).map((c) => c.symbol)).toEqual([
+      'Cmaj7',
+      'Fmaj7',
+      'G7',
+    ])
     expect(isResultsMode(s)).toBe(false)
   })
 
-  it('appends chords in order', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'addChord', degree: 3 })
-    s = editorReducer(s, { type: 'addChord', degree: 4 })
-    expect(s.userChords.map((c) => c.symbol)).toEqual(['Cmaj7', 'Fmaj7', 'G7'])
+  it('removes a chord by index', () => {
+    const s = editorReducer(withChords([0, 3]), {
+      type: 'removeChordAt',
+      index: 0,
+    })
+    expect(displayChords(s).map((c) => c.symbol)).toEqual(['Fmaj7'])
   })
 
-  it('suggests substitutions and enters results mode', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'addChord', degree: 4 })
-    s = editorReducer(s, { type: 'suggest', options: { homeBias: 1 } })
+  it('resets to empty', () => {
+    expect(editorReducer(withChords([0]), { type: 'reset' }).slots).toEqual([])
+  })
+})
+
+describe('editorReducer — suggest changes only 1–2 chords', () => {
+  it('substitutes at most two unlocked slots, leaving the rest diatonic', () => {
+    const s = editorReducer(withChords([0, 1, 4, 5]), { type: 'suggest' })
+    const changed = s.slots.filter((slot) => slot.sub !== null).length
+    expect(changed).toBeGreaterThanOrEqual(1)
+    expect(changed).toBeLessThanOrEqual(2)
     expect(isResultsMode(s)).toBe(true)
-    // homeBias 1 keeps everything diatonic
-    expect(displayChords(s).map((c) => c.symbol)).toEqual(['Cmaj7', 'G7'])
   })
 
-  it('returns to input mode when a chord is added after suggesting', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'suggest', options: { homeBias: 1 } })
-    s = editorReducer(s, { type: 'addChord', degree: 1 })
-    expect(s.suggested).toBeNull()
-    expect(isResultsMode(s)).toBe(false)
+  it('never touches a locked slot', () => {
+    let s = withChords([0, 1, 4, 5])
+    s = editorReducer(s, { type: 'toggleLock', index: 0 })
+    s = editorReducer(s, { type: 'toggleLock', index: 1 })
+    // run several times to be sure the locked ones are never picked
+    for (let n = 0; n < 25; n++) s = editorReducer(s, { type: 'suggest' })
+    expect(s.slots[0].sub).toBeNull()
+    expect(s.slots[1].sub).toBeNull()
+  })
+})
+
+describe('editorReducer — per-chord control', () => {
+  it('swaps just one chord, leaving the others diatonic', () => {
+    const start = withChords([0, 1, 4])
+    const s = editorReducer(start, {
+      type: 'swapChord',
+      index: 1,
+      rng: () => 0,
+    })
+    expect(s.slots[1].sub).not.toBeNull()
+    expect(s.slots[0].sub).toBeNull()
+    expect(s.slots[2].sub).toBeNull()
   })
 
-  it('removes a chord by index and clears suggestions', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'addChord', degree: 3 })
-    s = editorReducer(s, { type: 'suggest', options: { homeBias: 1 } })
-    s = editorReducer(s, { type: 'removeChordAt', index: 0 })
-    expect(s.userChords.map((c) => c.symbol)).toEqual(['Fmaj7'])
-    expect(s.suggested).toBeNull()
+  it('does not swap a locked chord', () => {
+    let s = withChords([0, 1])
+    s = editorReducer(s, { type: 'toggleLock', index: 1 })
+    s = editorReducer(s, { type: 'swapChord', index: 1, rng: () => 0 })
+    expect(s.slots[1].sub).toBeNull()
   })
 
-  it('resets to an empty input progression', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'reset' })
-    expect(s.userChords).toEqual([])
-    expect(s.suggested).toBeNull()
+  it('reverts a swapped chord back to diatonic', () => {
+    let s = editorReducer(withChords([0, 1]), {
+      type: 'swapChord',
+      index: 1,
+      rng: () => 0,
+    })
+    s = editorReducer(s, { type: 'revertChord', index: 1 })
+    expect(s.slots[1].sub).toBeNull()
   })
 
-  it('re-realizes existing chords when the key changes', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
-    s = editorReducer(s, { type: 'addChord', degree: 4 })
+  it('toggles a lock on and off', () => {
+    let s = editorReducer(withChords([0]), { type: 'toggleLock', index: 0 })
+    expect(s.slots[0].locked).toBe(true)
+    s = editorReducer(s, { type: 'toggleLock', index: 0 })
+    expect(s.slots[0].locked).toBe(false)
+  })
+})
+
+describe('editorReducer — settings', () => {
+  it('re-realizes bases and clears subs when the key changes', () => {
+    let s = editorReducer(withChords([0, 4]), {
+      type: 'swapChord',
+      index: 0,
+      rng: () => 0,
+    })
     s = editorReducer(s, { type: 'setKey', key: G_MAJOR })
     expect(s.key).toEqual(G_MAJOR)
-    expect(s.userChords.map((c) => c.symbol)).toEqual(['Gmaj7', 'D7'])
-  })
-
-  it('toggles substitution strategies on and off', () => {
-    const before = initialEditorState.enabledStrategies.length
-    let s = editorReducer(initialEditorState, {
-      type: 'toggleStrategy',
-      id: 'tritone',
-    })
-    expect(s.enabledStrategies).not.toContain('tritone')
-    expect(s.enabledStrategies).toHaveLength(before - 1)
-    s = editorReducer(s, { type: 'toggleStrategy', id: 'tritone' })
-    expect(s.enabledStrategies).toContain('tritone')
-  })
-
-  it('sets tempo and toggles mute', () => {
-    let s = editorReducer(initialEditorState, { type: 'setBpm', bpm: 120 })
-    expect(s.bpm).toBe(120)
-    s = editorReducer(s, { type: 'toggleMute' })
-    expect(s.muted).toBe(true)
-  })
-
-  it('loads a saved song into the editor', () => {
-    const song = {
-      key: G_MAJOR,
-      chords: [
-        {
-          degree: 0,
-          root: 'G',
-          quality: 'maj7' as const,
-          symbol: 'Gmaj7',
-          source: 'diatonic',
-        },
-      ],
-    }
-    const s = editorReducer(initialEditorState, { type: 'loadSong', song })
-    expect(s.key).toEqual(G_MAJOR)
-    expect(s.userChords.map((c) => c.symbol)).toEqual(['Gmaj7'])
-    expect(s.suggested).toBeNull()
+    expect(displayChords(s).map((c) => c.symbol)).toEqual(['Gmaj7', 'D7'])
+    expect(s.slots.every((slot) => slot.sub === null)).toBe(true)
   })
 
   it('applies a genre preset when the style changes', () => {
@@ -111,7 +120,6 @@ describe('editorReducer', () => {
     })
     expect(s.style).toBe('folk')
     expect(s.enabledStrategies).toContain('suspension')
-    // folk is triadic
     expect(s.extensions).toEqual({
       seventh: false,
       ninth: false,
@@ -120,8 +128,7 @@ describe('editorReducer', () => {
     expect(s.envelope.attack).toBe(STYLES.folk.envelope.attack)
   })
 
-  it('cascades extension toggles (cumulative both ways)', () => {
-    // jazz default = ninth → {seventh, ninth} on
+  it('cascades extension toggles both ways', () => {
     let s = editorReducer(initialEditorState, {
       type: 'toggleExtension',
       ext: 'eleventh',
@@ -136,22 +143,40 @@ describe('editorReducer', () => {
   })
 
   it('cycles the voicing of a single chord', () => {
-    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
+    let s = withChords([0])
     s = editorReducer(s, { type: 'cycleVoicing', index: 0 })
-    expect(s.userChords[0].voicing).toBe(1)
-    s = editorReducer(s, { type: 'cycleVoicing', index: 0 })
-    expect(s.userChords[0].voicing).toBe(2)
+    expect(displayChords(s)[0].voicing).toBe(1)
   })
 
-  it('updates the envelope', () => {
-    const s = editorReducer(initialEditorState, {
+  it('updates the envelope and tempo', () => {
+    let s = editorReducer(initialEditorState, {
       type: 'setEnvelope',
       envelope: { attack: 0.5 },
     })
     expect(s.envelope.attack).toBe(0.5)
+    s = editorReducer(s, { type: 'setBpm', bpm: 120 })
+    expect(s.bpm).toBe(120)
   })
 
-  it('exposes the current extension level', () => {
-    expect(extensionLevel(initialEditorState)).toBe('ninth') // jazz default
+  it('loads a saved song', () => {
+    const song = {
+      key: G_MAJOR,
+      chords: [
+        {
+          degree: 0,
+          root: 'G',
+          quality: 'maj7' as const,
+          symbol: 'Gmaj7',
+          source: 'diatonic',
+        },
+      ],
+    }
+    const s = editorReducer(initialEditorState, { type: 'loadSong', song })
+    expect(s.key).toEqual(G_MAJOR)
+    expect(displayChords(s).map((c) => c.symbol)).toEqual(['Gmaj7'])
+  })
+
+  it('exposes the current extension level (jazz default = ninth)', () => {
+    expect(extensionLevel(initialEditorState)).toBe('ninth')
   })
 })

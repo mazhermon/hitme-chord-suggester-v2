@@ -5,6 +5,7 @@ import { secondaryDominant } from './secondary-dominant'
 import { tritoneSub } from './tritone'
 import { diatonicThird } from './diatonic-third'
 import { suspension } from './suspension'
+import { planing } from './planing'
 
 export type { SubstitutionStrategy, SubstitutionContext } from './types'
 
@@ -15,7 +16,50 @@ export const STRATEGIES: SubstitutionStrategy[] = [
   tritoneSub,
   diatonicThird,
   suspension,
+  planing,
 ]
+
+export interface Candidate {
+  strategyId: string
+  chord: Chord
+}
+
+/** All substitution candidates for a single chord, from the enabled strategies. */
+export function candidatesFor(
+  chord: Chord,
+  key: KeyContext,
+  progression: Chord[],
+  index: number,
+  enabled: string[] = STRATEGIES.map((s) => s.id),
+): Candidate[] {
+  const active = STRATEGIES.filter((s) => enabled.includes(s.id))
+  return active.flatMap((strategy) =>
+    strategy
+      .suggest({ chord, key, progression, index })
+      .map((c) => ({ strategyId: strategy.id, chord: c })),
+  )
+}
+
+/** Weighted-random choice among candidates (roll is a value in [0, 1)). */
+export function pickCandidate(
+  candidates: Candidate[],
+  weights: Record<string, number>,
+  roll: number,
+): Chord | null {
+  if (candidates.length === 0) return null
+  const weighted = candidates.map((c) => ({
+    chord: c.chord,
+    w: weights[c.strategyId] ?? 1,
+  }))
+  const total = weighted.reduce((sum, c) => sum + c.w, 0)
+  if (total <= 0) return null
+  let r = roll * total
+  for (const c of weighted) {
+    r -= c.w
+    if (r < 0) return c.chord
+  }
+  return weighted[weighted.length - 1].chord
+}
 
 export interface SuggestOptions {
   /** Strategy ids to use. Defaults to all registered strategies. */
@@ -30,16 +74,9 @@ export interface SuggestOptions {
 
 const DEFAULT_HOME_BIAS = 0.34
 
-interface Candidate {
-  strategyId: string
-  chord: Chord
-}
-
 /**
- * Suggest a substitution for each chord in a progression. Per position we gather
- * candidates from the enabled strategies and, unless a home-bias roll keeps the
- * chord diatonic (or no candidates exist), pick one — weighted by strategy so a
- * style can favour its characteristic substitutions.
+ * Substitute every chord in a progression (each independently), with a home-bias
+ * roll for variety. Kept as a utility; the editor uses the slot-based suggest.
  */
 export function suggestForProgression(
   progression: Chord[],
@@ -53,35 +90,10 @@ export function suggestForProgression(
     homeBias = DEFAULT_HOME_BIAS,
   } = options
 
-  const active = STRATEGIES.filter((s) => enabled.includes(s.id))
-
   return progression.map((chord, index) => {
-    const candidates: Candidate[] = active.flatMap((strategy) =>
-      strategy
-        .suggest({ chord, key, progression, index })
-        .map((c) => ({ strategyId: strategy.id, chord: c })),
-    )
+    const candidates = candidatesFor(chord, key, progression, index, enabled)
     if (candidates.length === 0) return chord
     if (rng() < homeBias) return chord
-    return weightedPick(candidates, weights, rng()) ?? chord
+    return pickCandidate(candidates, weights, rng()) ?? chord
   })
-}
-
-function weightedPick(
-  candidates: Candidate[],
-  weights: Record<string, number>,
-  roll: number,
-): Chord | null {
-  const weighted = candidates.map((c) => ({
-    chord: c.chord,
-    w: weights[c.strategyId] ?? 1,
-  }))
-  const total = weighted.reduce((sum, c) => sum + c.w, 0)
-  if (total <= 0) return null
-  let r = roll * total
-  for (const c of weighted) {
-    r -= c.w
-    if (r < 0) return c.chord
-  }
-  return weighted[weighted.length - 1].chord
 }

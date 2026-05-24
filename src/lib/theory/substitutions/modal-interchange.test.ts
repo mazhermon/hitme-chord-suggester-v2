@@ -33,4 +33,17 @@ describe('modal interchange', () => {
     expect(subs.every((c) => c.symbol !== 'G7')).toBe(true)
     expect(subs.every((c) => c.source.startsWith('from '))).toBe(true)
   })
+
+  it('does not borrow from locrian (too rare in practice)', () => {
+    for (const degree of [0, 1, 2, 3, 4, 5, 6]) {
+      const chord = realizeChord(degree, cMajor)
+      const subs = modalInterchange.suggest({
+        chord,
+        key: cMajor,
+        progression: [chord],
+        index: 0,
+      })
+      expect(subs.every((c) => !c.source.includes('locrian'))).toBe(true)
+    }
+  })
 })
