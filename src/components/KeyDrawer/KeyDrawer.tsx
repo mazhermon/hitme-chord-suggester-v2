@@ -89,6 +89,17 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
         </section>
 
         <section className={styles.section}>
+          <label className={styles.mute}>
+            <input
+              type="checkbox"
+              checked={state.showGuitar}
+              onChange={() => dispatch({ type: 'toggleGuitar' })}
+            />
+            Show guitar chords
+          </label>
+        </section>
+
+        <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span>Key</span>
             <strong>

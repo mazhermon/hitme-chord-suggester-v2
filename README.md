@@ -12,16 +12,22 @@ options — and **play** them back. A Next.js rebuild of the original Angular ap
   behaviour, default chord extensions, and the synth so "Suggest" feels idiomatic
   (jazz → tritone subs & functional dominants; house → modal min9 pads; folk → suspensions; …).
 - **Multiple substitution types** (toggleable in the drawer):
-  - Modal interchange (borrowed chords from parallel modes)
+  - Modal interchange (borrowed chords from parallel modes — excludes the rare locrian)
   - Secondary dominants (V7/x)
   - Tritone substitution
   - Diatonic third-relation
   - Suspensions (sus2 / sus4)
+  - Planing — the house "pitched stab": transpose a chord up/down keeping its shape
+- **Suggest changes only 1–2 chords** at a time (re-roll for variety). Per chord you can:
+  click to **swap** just that chord, **lock** it so Suggest leaves it, or **revert** to diatonic.
 - **Chord extensions** — include 7ths / 9ths / 11ths (cumulative); changes the symbols and
   what you hear.
 - **Per-chord voicing** — cycle each chord through inversions, drop-2, open, and octave voicings.
+- **Guitar chord diagrams** — toggle "Show guitar chords" to see a six-string fretboard
+  (dots, open/muted markers, position) under each chord.
 - **Web Audio playback** with an editable **ADSR envelope** + waveform — tap a chord to hear it,
   or Play the whole progression at a set tempo.
+- **Responsive menu** — a persistent left sidebar on wide screens, an overlay drawer on small ones.
 - **Save progressions** — to `localStorage` by default, or **Firebase/Firestore** when configured.
 - Delete songs, and reopen a saved song back into the editor.
 

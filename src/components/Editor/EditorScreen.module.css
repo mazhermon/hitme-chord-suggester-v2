@@ -19,9 +19,6 @@
     flex: 1;
     min-width: 0;
   }
-  .menu {
-    display: none;
-  }
 }
 
 /* Light "input" canvas vs deeper "results" canvas — the legacy signature shift. */
@@ -77,4 +74,11 @@
   margin-top: 2rem;
   font-size: 0.9rem;
   opacity: 0.7;
+}
+
+/* Hide the hamburger once the sidebar is docked (declared last to win). */
+@media (min-width: 900px) {
+  .menu {
+    display: none;
+  }
 }

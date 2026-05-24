@@ -29,6 +29,7 @@ export interface EditorState {
   envelope: EnvelopeSettings
   bpm: number
   muted: boolean
+  showGuitar: boolean
 }
 
 function applyStyle(style: Style) {
@@ -46,6 +47,7 @@ export const initialEditorState: EditorState = {
   slots: [],
   bpm: 90,
   muted: false,
+  showGuitar: false,
   ...applyStyle(STYLES.jazz),
 }
 
@@ -68,6 +70,7 @@ export type EditorAction =
   | { type: 'setEnvelope'; envelope: Partial<EnvelopeSettings> }
   | { type: 'setBpm'; bpm: number }
   | { type: 'toggleMute' }
+  | { type: 'toggleGuitar' }
   | { type: 'loadSong'; song: { key: KeyContext; chords: Chord[] } }
 
 function shown(slot: ChordSlot): Chord {
@@ -254,6 +257,9 @@ export function editorReducer(
 
     case 'toggleMute':
       return { ...state, muted: !state.muted }
+
+    case 'toggleGuitar':
+      return { ...state, showGuitar: !state.showGuitar }
 
     case 'loadSong':
       return {

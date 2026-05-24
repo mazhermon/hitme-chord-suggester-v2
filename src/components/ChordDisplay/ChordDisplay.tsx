@@ -8,6 +8,8 @@ import {
   type ExtensionLevel,
 } from '@/lib/theory/extensions'
 import { VOICING_NAMES } from '@/lib/audio/voicing'
+import { findGuitarShape } from '@/lib/guitar/voicing'
+import { ChordDiagram } from '@/components/ChordDiagram/ChordDiagram'
 import styles from './ChordDisplay.module.css'
 
 interface ChordDisplayProps {
@@ -15,6 +17,8 @@ interface ChordDisplayProps {
   /** Extension level used to render symbols + audio (default: 7ths). */
   level?: ExtensionLevel
   resultsMode?: boolean
+  /** Show a guitar chord diagram under each chord. */
+  showGuitar?: boolean
   /** Per-index flags for editor controls. */
   locked?: boolean[]
   substituted?: boolean[]
@@ -32,6 +36,7 @@ export function ChordDisplay({
   chords,
   level = 'seventh',
   resultsMode = false,
+  showGuitar = false,
   locked,
   substituted,
   onSwap,
@@ -136,6 +141,10 @@ export function ChordDisplay({
                 </button>
               )}
             </div>
+
+            {showGuitar && (
+              <ChordDiagram {...findGuitarShape(chord)} name={symbol} />
+            )}
 
             {removable && (
               <button
