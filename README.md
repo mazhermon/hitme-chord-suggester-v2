@@ -8,12 +8,20 @@ options — and **play** them back. A Next.js rebuild of the original Angular ap
 ## Features
 
 - **All 12 keys**, major and (natural) minor, with correct enharmonic spelling (via `tonal`).
+- **Genre presets** — Jazz / Folk / Pop / House. Picking one reconfigures the suggestion
+  behaviour, default chord extensions, and the synth so "Suggest" feels idiomatic
+  (jazz → tritone subs & functional dominants; house → modal min9 pads; folk → suspensions; …).
 - **Multiple substitution types** (toggleable in the drawer):
   - Modal interchange (borrowed chords from parallel modes)
   - Secondary dominants (V7/x)
   - Tritone substitution
   - Diatonic third-relation
-- **Web Audio playback** — tap a chord to hear it, or Play the whole progression at a set tempo.
+  - Suspensions (sus2 / sus4)
+- **Chord extensions** — include 7ths / 9ths / 11ths (cumulative); changes the symbols and
+  what you hear.
+- **Per-chord voicing** — cycle each chord through inversions, drop-2, open, and octave voicings.
+- **Web Audio playback** with an editable **ADSR envelope** + waveform — tap a chord to hear it,
+  or Play the whole progression at a set tempo.
 - **Save progressions** — to `localStorage` by default, or **Firebase/Firestore** when configured.
 - Delete songs, and reopen a saved song back into the editor.
 

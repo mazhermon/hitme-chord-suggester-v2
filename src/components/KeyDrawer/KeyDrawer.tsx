@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { MAJOR_TONICS, MINOR_TONICS } from '@/lib/theory/keys'
 import { STRATEGIES } from '@/lib/theory/substitutions'
+import { STYLE_LIST } from '@/lib/theory/styles'
 import type { Mode } from '@/lib/theory/types'
+import type { Waveform } from '@/lib/audio/envelope'
 import { useEditor } from '@/state/EditorProvider'
+import type { Extension } from '@/state/editor'
 import styles from './KeyDrawer.module.css'
 
 interface KeyDrawerProps {
@@ -12,9 +15,17 @@ interface KeyDrawerProps {
   onClose: () => void
 }
 
+const WAVEFORMS: Waveform[] = ['sine', 'triangle', 'sawtooth', 'square']
+const EXTENSIONS: { ext: Extension; label: string }[] = [
+  { ext: 'seventh', label: '7th' },
+  { ext: 'ninth', label: '9th' },
+  { ext: 'eleventh', label: '11th' },
+]
+
 export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
   const { state, dispatch } = useEditor()
   const tonics = state.key.mode === 'major' ? MAJOR_TONICS : MINOR_TONICS
+  const env = state.envelope
 
   function changeMode(mode: Mode) {
     const list = mode === 'major' ? MAJOR_TONICS : MINOR_TONICS
@@ -55,6 +66,28 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
             Song list
           </Link>
         </nav>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span>Genre</span>
+          </div>
+          <div className={styles.genre} role="group" aria-label="Genre">
+            {STYLE_LIST.map((s) => (
+              <button
+                key={s.id}
+                className={s.id === state.style ? styles.genreOn : ''}
+                aria-pressed={s.id === state.style}
+                title={s.description}
+                onClick={() => dispatch({ type: 'setStyle', style: s.id })}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <p className={styles.note}>
+            {STYLE_LIST.find((s) => s.id === state.style)?.description}
+          </p>
+        </section>
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>
@@ -103,6 +136,28 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>
+            <span>Extensions</span>
+          </div>
+          <div
+            className={styles.exts}
+            role="group"
+            aria-label="Chord extensions"
+          >
+            {EXTENSIONS.map(({ ext, label }) => (
+              <label key={ext}>
+                <input
+                  type="checkbox"
+                  checked={state.extensions[ext]}
+                  onChange={() => dispatch({ type: 'toggleExtension', ext })}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
             <span>Substitutions</span>
           </div>
           <ul className={styles.strategies}>
@@ -121,6 +176,67 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span>Envelope</span>
+            <strong>{env.waveform}</strong>
+          </div>
+          <EnvSlider
+            label="Attack"
+            value={env.attack}
+            min={0}
+            max={0.5}
+            step={0.005}
+            onChange={(attack) =>
+              dispatch({ type: 'setEnvelope', envelope: { attack } })
+            }
+          />
+          <EnvSlider
+            label="Decay"
+            value={env.decay}
+            min={0}
+            max={0.5}
+            step={0.01}
+            onChange={(decay) =>
+              dispatch({ type: 'setEnvelope', envelope: { decay } })
+            }
+          />
+          <EnvSlider
+            label="Sustain"
+            value={env.sustain}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(sustain) =>
+              dispatch({ type: 'setEnvelope', envelope: { sustain } })
+            }
+          />
+          <EnvSlider
+            label="Release"
+            value={env.release}
+            min={0}
+            max={2}
+            step={0.05}
+            onChange={(release) =>
+              dispatch({ type: 'setEnvelope', envelope: { release } })
+            }
+          />
+          <div className={styles.waves} role="group" aria-label="Waveform">
+            {WAVEFORMS.map((w) => (
+              <button
+                key={w}
+                className={w === env.waveform ? styles.tonicOn : ''}
+                aria-pressed={w === env.waveform}
+                onClick={() =>
+                  dispatch({ type: 'setEnvelope', envelope: { waveform: w } })
+                }
+              >
+                {w}
+              </button>
+            ))}
+          </div>
         </section>
 
         <section className={styles.section}>
@@ -149,5 +265,31 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
         </section>
       </aside>
     </>
+  )
+}
+
+interface EnvSliderProps {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (value: number) => void
+}
+
+function EnvSlider({ label, value, min, max, step, onChange }: EnvSliderProps) {
+  return (
+    <div className={styles.envRow}>
+      <span className={styles.envLabel}>{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={label}
+      />
+    </div>
   )
 }

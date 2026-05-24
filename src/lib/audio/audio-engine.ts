@@ -1,9 +1,11 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
+import { DEFAULT_ENVELOPE, type EnvelopeSettings } from './envelope'
+import type { ExtensionLevel } from '../theory/extensions'
 
 /**
- * Minimal Web Audio API synth: schedules oscillator + gain "voices" with a short
+ * Web Audio API synth: schedules oscillator + gain "voices" with an ADSR
  * envelope to play a chord or sequence a progression. Browser-only and guarded;
- * the pure note math lives in voicing.ts (which is unit-tested).
+ * the note math lives in voicing.ts (unit-tested).
  */
 
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext }
@@ -40,12 +42,13 @@ export function isMuted(): boolean {
   return muted
 }
 
+type PlayableChord = VoiceableChord & { voicing?: number }
+
 interface PlayOptions {
-  /** Seconds the chord rings for. */
+  level?: ExtensionLevel
+  envelope?: EnvelopeSettings
   duration?: number
-  /** Delay before the chord starts, in seconds from now. */
   when?: number
-  /** Peak gain per voice. */
   gain?: number
 }
 
@@ -53,36 +56,56 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   const audio = getAudioContext()
   if (!audio || !masterGain || freqs.length === 0) return
 
+  const env = options.envelope ?? DEFAULT_ENVELOPE
   const { duration = 1.2, when = 0, gain = 0.22 } = options
   const start = audio.currentTime + when
-  const attack = 0.012
-  const release = 0.3
+  const peak = gain
+  const sustainLevel = Math.max(0.0001, peak * env.sustain)
 
   const voice = audio.createGain()
   voice.connect(masterGain)
-  voice.gain.setValueAtTime(0, start)
-  voice.gain.linearRampToValueAtTime(gain, start + attack)
-  voice.gain.setValueAtTime(gain, start + Math.max(attack, duration - release))
-  voice.gain.linearRampToValueAtTime(0.0001, start + duration)
+  // ADSR
+  voice.gain.setValueAtTime(0.0001, start)
+  voice.gain.linearRampToValueAtTime(peak, start + env.attack)
+  voice.gain.linearRampToValueAtTime(
+    sustainLevel,
+    start + env.attack + env.decay,
+  )
+  const releaseStart = Math.max(
+    start + env.attack + env.decay,
+    start + duration - env.release,
+  )
+  voice.gain.setValueAtTime(sustainLevel, releaseStart)
+  voice.gain.linearRampToValueAtTime(0.0001, releaseStart + env.release)
+  const stopAt = releaseStart + env.release + 0.05
 
   for (const frequency of freqs) {
     const osc = audio.createOscillator()
-    osc.type = 'triangle'
+    osc.type = env.waveform
     osc.frequency.value = frequency
     osc.connect(voice)
     osc.start(start)
-    osc.stop(start + duration + 0.05)
+    osc.stop(stopAt)
   }
 }
 
-/** Play a single chord now (or after `when` seconds). */
-export function playChord(chord: VoiceableChord, options?: PlayOptions): void {
-  playFrequencies(chordToFrequencies(chord), options)
+/** Play a single chord now (or after `when` seconds), using its own voicing. */
+export function playChord(
+  chord: PlayableChord,
+  options: PlayOptions = {},
+): void {
+  const freqs = chordToFrequencies(chord, {
+    level: options.level,
+    voicing: chord.voicing,
+  })
+  playFrequencies(freqs, options)
 }
 
 export interface ProgressionOptions {
   bpm?: number
   beatsPerChord?: number
+  level?: ExtensionLevel
+  envelope?: EnvelopeSettings
 }
 
 /**
@@ -90,13 +113,15 @@ export interface ProgressionOptions {
  * the UI can show play progress.
  */
 export function playProgression(
-  chords: VoiceableChord[],
+  chords: PlayableChord[],
   options: ProgressionOptions = {},
 ): number {
-  const { bpm = 90, beatsPerChord = 2 } = options
+  const { bpm = 90, beatsPerChord = 2, level, envelope } = options
   const secondsPerChord = (60 / bpm) * beatsPerChord
   chords.forEach((chord, i) => {
     playChord(chord, {
+      level,
+      envelope,
       when: i * secondsPerChord,
       duration: secondsPerChord * 0.95,
     })

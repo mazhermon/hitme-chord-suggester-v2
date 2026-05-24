@@ -35,6 +35,8 @@ export interface Chord {
   quality: Quality
   symbol: string
   source: string
+  /** Per-chord voicing variant index (cycles VOICING_NAMES); affects playback. */
+  voicing?: number
 }
 
 /** Human-readable display suffix appended to a root note to form a chord symbol. */

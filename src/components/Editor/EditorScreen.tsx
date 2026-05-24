@@ -6,7 +6,7 @@ import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import type { Chord } from '@/lib/theory/types'
 import { useEditor } from '@/state/EditorProvider'
-import { displayChords, isResultsMode } from '@/state/editor'
+import { displayChords, isResultsMode, extensionLevel } from '@/state/editor'
 import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
 import { getStorage } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
@@ -55,12 +55,28 @@ export function EditorScreen() {
     { scope: root, dependencies: [empty] },
   )
 
+  const level = extensionLevel(state)
+
   function handlePlayChord(chord: Chord) {
-    playChord(chord)
+    playChord(chord, { level, envelope: state.envelope })
   }
 
   function handlePlayAll(toPlay: Chord[]) {
-    playProgression(toPlay, { bpm: state.bpm })
+    playProgression(toPlay, {
+      bpm: state.bpm,
+      level,
+      envelope: state.envelope,
+    })
+  }
+
+  function handleCycleVoicing(index: number) {
+    const chord = chords[index]
+    const nextVoicing = (chord.voicing ?? 0) + 1
+    dispatch({ type: 'cycleVoicing', index })
+    playChord(
+      { ...chord, voicing: nextVoicing },
+      { level, envelope: state.envelope },
+    )
   }
 
   async function handleSave(name: string) {
@@ -105,8 +121,10 @@ export function EditorScreen() {
         ) : (
           <ChordDisplay
             chords={chords}
+            level={level}
             resultsMode={results}
             onChordClick={handlePlayChord}
+            onCycleVoicing={handleCycleVoicing}
             removable={!results}
             onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}
           />

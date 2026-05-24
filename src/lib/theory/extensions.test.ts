@@ -2,6 +2,7 @@ import {
   renderQuality,
   renderSymbol,
   levelFromFlags,
+  flagsFromLevel,
   type ExtensionLevel,
 } from './extensions'
 
@@ -85,6 +86,22 @@ describe('renderSymbol', () => {
     expect(renderSymbol('C', '7', 'ninth')).toBe('C9')
     expect(renderSymbol('Eb', 'min7', 'eleventh')).toBe('Ebmin11')
     expect(renderSymbol('G', 'maj7', 'triad')).toBe('G')
+  })
+})
+
+describe('flagsFromLevel', () => {
+  it('expands a level into cumulative flags (round-trips levelFromFlags)', () => {
+    expect(flagsFromLevel('triad')).toEqual({
+      seventh: false,
+      ninth: false,
+      eleventh: false,
+    })
+    expect(flagsFromLevel('ninth')).toEqual({
+      seventh: true,
+      ninth: true,
+      eleventh: false,
+    })
+    expect(levelFromFlags(flagsFromLevel('eleventh'))).toBe('eleventh')
   })
 })
 

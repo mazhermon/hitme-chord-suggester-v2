@@ -127,3 +127,12 @@ export function levelFromFlags(flags: ExtensionFlags): ExtensionLevel {
   if (flags.seventh) return 'seventh'
   return 'triad'
 }
+
+/** Expand a level into cumulative flags (inverse of levelFromFlags). */
+export function flagsFromLevel(level: ExtensionLevel): ExtensionFlags {
+  return {
+    seventh: level !== 'triad',
+    ninth: level === 'ninth' || level === 'eleventh',
+    eleventh: level === 'eleventh',
+  }
+}

@@ -3,7 +3,9 @@ import {
   editorReducer,
   displayChords,
   isResultsMode,
+  extensionLevel,
 } from './editor'
+import { STYLES } from '@/lib/theory/styles'
 import type { KeyContext } from '@/lib/theory/types'
 
 const G_MAJOR: KeyContext = { tonic: 'G', mode: 'major' }
@@ -100,5 +102,56 @@ describe('editorReducer', () => {
     expect(s.key).toEqual(G_MAJOR)
     expect(s.userChords.map((c) => c.symbol)).toEqual(['Gmaj7'])
     expect(s.suggested).toBeNull()
+  })
+
+  it('applies a genre preset when the style changes', () => {
+    const s = editorReducer(initialEditorState, {
+      type: 'setStyle',
+      style: 'folk',
+    })
+    expect(s.style).toBe('folk')
+    expect(s.enabledStrategies).toContain('suspension')
+    // folk is triadic
+    expect(s.extensions).toEqual({
+      seventh: false,
+      ninth: false,
+      eleventh: false,
+    })
+    expect(s.envelope.attack).toBe(STYLES.folk.envelope.attack)
+  })
+
+  it('cascades extension toggles (cumulative both ways)', () => {
+    // jazz default = ninth → {seventh, ninth} on
+    let s = editorReducer(initialEditorState, {
+      type: 'toggleExtension',
+      ext: 'eleventh',
+    })
+    expect(s.extensions).toEqual({ seventh: true, ninth: true, eleventh: true })
+    s = editorReducer(s, { type: 'toggleExtension', ext: 'seventh' })
+    expect(s.extensions).toEqual({
+      seventh: false,
+      ninth: false,
+      eleventh: false,
+    })
+  })
+
+  it('cycles the voicing of a single chord', () => {
+    let s = editorReducer(initialEditorState, { type: 'addChord', degree: 0 })
+    s = editorReducer(s, { type: 'cycleVoicing', index: 0 })
+    expect(s.userChords[0].voicing).toBe(1)
+    s = editorReducer(s, { type: 'cycleVoicing', index: 0 })
+    expect(s.userChords[0].voicing).toBe(2)
+  })
+
+  it('updates the envelope', () => {
+    const s = editorReducer(initialEditorState, {
+      type: 'setEnvelope',
+      envelope: { attack: 0.5 },
+    })
+    expect(s.envelope.attack).toBe(0.5)
+  })
+
+  it('exposes the current extension level', () => {
+    expect(extensionLevel(initialEditorState)).toBe('ninth') // jazz default
   })
 })

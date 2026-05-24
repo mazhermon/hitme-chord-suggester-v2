@@ -30,4 +30,18 @@ describe('ChordDisplay', () => {
     await userEvent.click(screen.getByRole('button', { name: /Remove Cmaj7/ }))
     expect(onRemove).toHaveBeenCalledWith(0)
   })
+
+  it('renders chord symbols at the given extension level', () => {
+    render(<ChordDisplay chords={[realizeChord(0, cMajor)]} level="ninth" />)
+    expect(screen.getByText('maj9')).toBeInTheDocument() // Cmaj7 → Cmaj9
+  })
+
+  it('cycles a chord voicing via its voicing control', async () => {
+    const onCycleVoicing = vi.fn()
+    render(<ChordDisplay chords={chords} onCycleVoicing={onCycleVoicing} />)
+    await userEvent.click(
+      screen.getByRole('button', { name: /voicing of Cmaj7/i }),
+    )
+    expect(onCycleVoicing).toHaveBeenCalledWith(0)
+  })
 })
