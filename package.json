@@ -23,7 +23,8 @@
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "tonal": "^6.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
