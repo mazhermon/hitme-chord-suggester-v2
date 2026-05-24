@@ -9,6 +9,7 @@ import { useEditor } from '@/state/EditorProvider'
 import { displayChords, isResultsMode, extensionLevel } from '@/state/editor'
 import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
 import { getStorage } from '@/lib/storage'
+import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
 import { lessonForSource, type Lesson } from '@/lib/theory/lessons'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { ChordDock } from '@/components/ChordDock/ChordDock'
@@ -71,6 +72,11 @@ export function EditorScreen() {
       level,
       envelope: state.envelope,
     })
+  }
+
+  function handleExportMidi() {
+    const bytes = progressionToMidi(chords, { bpm: state.bpm, level })
+    downloadMidi(bytes, 'hitme-progression')
   }
 
   function handleCycleVoicing(index: number) {
@@ -151,7 +157,11 @@ export function EditorScreen() {
           )}
         </main>
 
-        <ChordDock onPlay={handlePlayAll} onSave={() => setSaveOpen(true)} />
+        <ChordDock
+          onPlay={handlePlayAll}
+          onSave={() => setSaveOpen(true)}
+          onExportMidi={handleExportMidi}
+        />
       </div>
 
       <LessonPanel lesson={lesson} onClose={() => setLesson(null)} />

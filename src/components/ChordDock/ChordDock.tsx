@@ -10,9 +10,10 @@ import styles from './ChordDock.module.css'
 interface ChordDockProps {
   onPlay: (chords: Chord[]) => void
   onSave: () => void
+  onExportMidi?: () => void
 }
 
-export function ChordDock({ onPlay, onSave }: ChordDockProps) {
+export function ChordDock({ onPlay, onSave, onExportMidi }: ChordDockProps) {
   const { state, dispatch } = useEditor()
   const chords = displayChords(state)
   const hasChords = chords.length > 0
@@ -48,6 +49,14 @@ export function ChordDock({ onPlay, onSave }: ChordDockProps) {
           disabled={!hasChords}
         >
           Reset
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => onExportMidi?.()}
+          disabled={!hasChords}
+          title="Download a .mid file to drag into your DAW"
+        >
+          MIDI
         </Button>
         <Button variant="primary" onClick={onSave} disabled={!hasChords}>
           Save
