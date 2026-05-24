@@ -1,0 +1,35 @@
+.dock {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  padding: 1rem clamp(0.5rem, 3vw, 2rem) 1.25rem;
+  background: linear-gradient(to top, rgba(47, 58, 47, 0.35), transparent);
+}
+
+.numerals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+@media (min-width: 720px) {
+  .dock {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+}

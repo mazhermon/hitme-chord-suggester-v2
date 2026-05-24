@@ -1,0 +1,61 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: background 0.6s var(--ease-out);
+}
+
+/* Light "input" canvas vs deeper "results" canvas — the legacy signature shift. */
+.input {
+  background: var(--bg-input);
+}
+.results {
+  background: var(--bg-results);
+}
+
+.header {
+  padding: 1.25rem clamp(1rem, 4vw, 3rem);
+}
+
+.menu {
+  display: grid;
+  gap: 5px;
+  width: 40px;
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.menu span {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--white);
+}
+
+.canvas {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+}
+
+.intro {
+  text-align: center;
+}
+.introTitle {
+  margin: 0;
+  font-size: clamp(3rem, 12vw, 5rem);
+  line-height: 1;
+}
+.introSub {
+  margin: 0.25rem 0 0;
+  font-style: italic;
+  font-family: var(--font-display);
+  opacity: 0.8;
+}
+.hint {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}

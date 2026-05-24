@@ -1,0 +1,146 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 26, 20, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease-out);
+  z-index: 20;
+}
+.scrimOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(300px, 82vw);
+  padding: 1.25rem 1.4rem 2rem;
+  background: var(--primary);
+  border-top-right-radius: var(--radius-med);
+  border-bottom-right-radius: var(--radius-med);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  transform: translateX(-105%);
+  transition: transform 0.3s var(--ease-out);
+  overflow-y: auto;
+  z-index: 21;
+}
+.drawerOpen {
+  transform: translateX(0);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(249, 249, 249, 0.15);
+  color: var(--white);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(249, 249, 249, 0.2);
+  font-size: 1.05rem;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.sectionHead strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1px solid rgba(249, 249, 249, 0.4);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+.toggle button {
+  padding: 0.35rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+}
+.toggleOn {
+  background: var(--white) !important;
+  color: var(--dark) !important;
+}
+
+.tonics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+}
+.tonics button {
+  padding: 0.4rem 0;
+  border: 1px solid rgba(249, 249, 249, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--white);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.tonicOn {
+  background: var(--white) !important;
+  color: var(--dark) !important;
+  font-weight: 600;
+}
+
+.strategies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.strategies label,
+.mute {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.section input[type='range'] {
+  width: 100%;
+  accent-color: var(--white);
+}
+.mute {
+  margin-top: 0.75rem;
+}
