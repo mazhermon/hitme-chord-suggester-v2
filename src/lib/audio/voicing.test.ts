@@ -1,4 +1,5 @@
 import { chordToFrequencies, chordToMidi, VOICING_NAMES } from './voicing'
+import { flagsFromLevel } from '../theory/extensions'
 
 describe('chordToFrequencies', () => {
   it('voices a maj7 as four ascending frequencies near the root octave', () => {
@@ -33,7 +34,10 @@ describe('chordToMidi', () => {
 
   it('honours the extension level (min11 = six notes)', () => {
     expect(
-      chordToMidi({ root: 'C', quality: 'min7' }, { level: 'eleventh' }),
+      chordToMidi(
+        { root: 'C', quality: 'min7' },
+        { extensions: flagsFromLevel('eleventh') },
+      ),
     ).toHaveLength(6)
   })
 })
@@ -42,14 +46,17 @@ describe('chordToFrequencies with extension level', () => {
   it('voices a minor 11th as six notes (deep-house texture)', () => {
     const freqs = chordToFrequencies(
       { root: 'C', quality: 'min7' },
-      { level: 'eleventh' },
+      { extensions: flagsFromLevel('eleventh') },
     )
     expect(freqs).toHaveLength(6) // C Eb G Bb D F
   })
 
   it('reduces a seventh quality to three notes at triad level', () => {
     expect(
-      chordToFrequencies({ root: 'C', quality: 'maj7' }, { level: 'triad' }),
+      chordToFrequencies(
+        { root: 'C', quality: 'maj7' },
+        { extensions: flagsFromLevel('triad') },
+      ),
     ).toHaveLength(3)
   })
 })

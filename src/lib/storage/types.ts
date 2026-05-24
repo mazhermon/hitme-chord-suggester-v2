@@ -8,8 +8,10 @@ export interface Song {
   key: KeyContext
   chords: Chord[]
   createdAt: number
-  /** Extension level the chords were shown at (so 9ths/11ths survive a save). */
+  /** Global default extension flags at save time. */
   extensions?: ExtensionFlags
+  /** Per-chord effective extension flags (aligned to `chords`). */
+  chordExtensions?: ExtensionFlags[]
   /** Which chords were locked, by index. */
   locked?: boolean[]
 }

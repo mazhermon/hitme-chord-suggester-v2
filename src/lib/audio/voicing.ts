@@ -1,7 +1,7 @@
 import { Chord, Note } from 'tonal'
 import type { Quality } from '../theory/types'
 import { QUALITY_TONAL } from '../theory/types'
-import { renderQuality, type ExtensionLevel } from '../theory/extensions'
+import { chordNotes, type ExtensionFlags } from '../theory/extensions'
 import { midiToFreq } from '../theory/notes'
 
 /** A chord we can voice: a spelled root and a quality. */
@@ -11,8 +11,8 @@ export interface VoiceableChord {
 }
 
 export interface VoiceOptions {
-  /** Extension level. If omitted, the quality's own natural form is used. */
-  level?: ExtensionLevel
+  /** Which 7/9/11 extensions to include. If omitted, the quality's natural form is used. */
+  extensions?: ExtensionFlags
   /** Voicing variant index (cycles VOICING_NAMES). */
   voicing?: number
   baseOctave?: number
@@ -61,12 +61,10 @@ export function chordToMidi(
   chord: VoiceableChord,
   options: VoiceOptions = {},
 ): number[] {
-  const { level, voicing = 0, baseOctave = 4 } = options
-  const tonalType = level
-    ? renderQuality(chord.quality, level).tonalType
-    : QUALITY_TONAL[chord.quality]
-
-  const pitchClasses = Chord.getChord(tonalType, chord.root).notes
+  const { extensions, voicing = 0, baseOctave = 4 } = options
+  const pitchClasses = extensions
+    ? chordNotes(chord.root, chord.quality, extensions)
+    : Chord.getChord(QUALITY_TONAL[chord.quality], chord.root).notes
   if (pitchClasses.length === 0) return []
 
   // Assign rising octaves so pitch classes stack upward.

@@ -1,19 +1,36 @@
+import { Note } from 'tonal'
 import type { Quality } from './types'
 
-/** How "tall" a chord is rendered/voiced. */
+/** Which upper extensions are present — each is independent (9th without 7th = add9). */
+export interface ExtensionFlags {
+  seventh: boolean
+  ninth: boolean
+  eleventh: boolean
+}
+
+export const NO_EXTENSIONS: ExtensionFlags = {
+  seventh: false,
+  ninth: false,
+  eleventh: false,
+}
+
+export type Extension = keyof ExtensionFlags
+
+/** A cumulative "level", used only to seed a sensible default per genre. */
 export type ExtensionLevel = 'triad' | 'seventh' | 'ninth' | 'eleventh'
 
-type Family =
-  | 'maj'
-  | 'min'
-  | 'dom'
-  | 'dim'
-  | 'halfdim'
-  | 'aug'
-  | 'sus2'
-  | 'sus4'
+export function flagsFromLevel(level: ExtensionLevel): ExtensionFlags {
+  return {
+    seventh: level !== 'triad',
+    ninth: level === 'ninth' || level === 'eleventh',
+    eleventh: level === 'eleventh',
+  }
+}
 
-function chordFamily(quality: Quality): Family {
+type ExtendableFamily = 'maj' | 'min' | 'dom'
+type Family = ExtendableFamily | 'dim' | 'halfdim' | 'aug' | 'sus2' | 'sus4'
+
+function family(quality: Quality): Family {
   switch (quality) {
     case 'maj7':
     case 'maj':
@@ -37,102 +54,105 @@ function chordFamily(quality: Quality): Family {
   }
 }
 
-interface Rendered {
-  /** Display suffix appended to the root (e.g. "min9"). */
-  suffix: string
-  /** tonal chord-type name used to look up notes for voicing. */
-  tonalType: string
+// Triad + natural-7th intervals for the families that take independent extensions.
+const CORE: Record<
+  ExtendableFamily,
+  { third: string; fifth: string; seventh: string }
+> = {
+  maj: { third: '3M', fifth: '5P', seventh: '7M' },
+  min: { third: '3m', fifth: '5P', seventh: '7m' },
+  dom: { third: '3M', fifth: '5P', seventh: '7m' },
 }
 
-// Per family, the rendering at each level. Levels that don't exist musically
-// (e.g. maj11) cap at the richest sensible voicing.
-const LADDER: Record<Family, Record<ExtensionLevel, Rendered>> = {
-  maj: {
-    triad: { suffix: '', tonalType: 'M' },
-    seventh: { suffix: 'maj7', tonalType: 'maj7' },
-    ninth: { suffix: 'maj9', tonalType: 'maj9' },
-    eleventh: { suffix: 'maj9', tonalType: 'maj9' }, // maj11 is dissonant → cap
-  },
-  min: {
-    triad: { suffix: 'min', tonalType: 'm' },
-    seventh: { suffix: 'min7', tonalType: 'm7' },
-    ninth: { suffix: 'min9', tonalType: 'm9' },
-    eleventh: { suffix: 'min11', tonalType: 'm11' },
-  },
-  dom: {
-    triad: { suffix: '', tonalType: 'M' },
-    seventh: { suffix: '7', tonalType: '7' },
-    ninth: { suffix: '9', tonalType: '9' },
-    eleventh: { suffix: '11', tonalType: '11' },
-  },
-  dim: {
-    triad: { suffix: 'dim', tonalType: 'dim' },
-    seventh: { suffix: 'dim7', tonalType: 'dim7' },
-    ninth: { suffix: 'dim7', tonalType: 'dim7' },
-    eleventh: { suffix: 'dim7', tonalType: 'dim7' },
-  },
-  halfdim: {
-    triad: { suffix: 'dim', tonalType: 'dim' },
-    seventh: { suffix: 'min7(b5)', tonalType: 'm7b5' },
-    ninth: { suffix: 'min9(b5)', tonalType: 'm9b5' },
-    eleventh: { suffix: 'min9(b5)', tonalType: 'm9b5' },
-  },
-  aug: {
-    triad: { suffix: 'aug', tonalType: 'aug' },
-    seventh: { suffix: 'aug', tonalType: 'aug' },
-    ninth: { suffix: 'aug', tonalType: 'aug' },
-    eleventh: { suffix: 'aug', tonalType: 'aug' },
-  },
-  sus2: {
-    triad: { suffix: 'sus2', tonalType: 'sus2' },
-    seventh: { suffix: 'sus2', tonalType: 'sus2' },
-    ninth: { suffix: 'sus2', tonalType: 'sus2' },
-    eleventh: { suffix: 'sus2', tonalType: 'sus2' },
-  },
-  sus4: {
-    triad: { suffix: 'sus4', tonalType: 'sus4' },
-    seventh: { suffix: 'sus4', tonalType: 'sus4' },
-    ninth: { suffix: 'sus4', tonalType: 'sus4' },
-    eleventh: { suffix: 'sus4', tonalType: 'sus4' },
-  },
+// Qualities that ignore the extension flags (rendered fixed).
+const FIXED: Record<
+  'dim' | 'halfdim' | 'aug' | 'sus2' | 'sus4',
+  { intervals: string[]; suffix: string }
+> = {
+  dim: { intervals: ['1P', '3m', '5d', '6M'], suffix: 'dim7' },
+  halfdim: { intervals: ['1P', '3m', '5d', '7m'], suffix: 'min7(b5)' },
+  aug: { intervals: ['1P', '3M', '5A'], suffix: 'aug' },
+  sus2: { intervals: ['1P', '2M', '5P'], suffix: 'sus2' },
+  sus4: { intervals: ['1P', '4P', '5P'], suffix: 'sus4' },
 }
 
-/** Render a base quality at an extension level → display suffix + tonal type. */
-export function renderQuality(
-  quality: Quality,
-  level: ExtensionLevel,
-): Rendered {
-  return LADDER[chordFamily(quality)][level]
+const TRIAD_TOKEN: Record<ExtendableFamily, string> = {
+  maj: '',
+  min: 'min',
+  dom: '',
+}
+const SEVENTH_TOKEN: Record<ExtendableFamily, Record<7 | 9 | 11, string>> = {
+  maj: { 7: 'maj7', 9: 'maj9', 11: 'maj11' },
+  min: { 7: 'min7', 9: 'min9', 11: 'min11' },
+  dom: { 7: '7', 9: '9', 11: '11' },
 }
 
-/** Full chord symbol for a spelled root at an extension level. */
+function extendableSuffix(fam: ExtendableFamily, ext: ExtensionFlags): string {
+  const { seventh, ninth, eleventh } = ext
+  if (!seventh && !ninth && !eleventh) return TRIAD_TOKEN[fam]
+
+  if (seventh) {
+    const level = ninth && eleventh ? 11 : ninth ? 9 : 7
+    let s = SEVENTH_TOKEN[fam][level]
+    if (eleventh && !ninth) s += '(add11)' // 11 without 9
+    return s
+  }
+
+  // No 7th → added-tone chord on the triad.
+  const adds: string[] = []
+  if (ninth) adds.push('add9')
+  if (eleventh) adds.push('add11')
+  return fam === 'min' ? `min(${adds.join(',')})` : adds.join('')
+}
+
+/** Whether a quality responds to the 7/9/11 extension flags (maj/min/dom families). */
+export function isExtendable(quality: Quality): boolean {
+  const fam = family(quality)
+  return fam === 'maj' || fam === 'min' || fam === 'dom'
+}
+
+/** Display suffix for a chord at the given extension flags. */
+export function chordSuffix(quality: Quality, ext: ExtensionFlags): string {
+  const fam = family(quality)
+  if (fam === 'maj' || fam === 'min' || fam === 'dom') {
+    return extendableSuffix(fam, ext)
+  }
+  return FIXED[fam].suffix
+}
+
+/** Full chord symbol: root + suffix. */
 export function renderSymbol(
   root: string,
   quality: Quality,
-  level: ExtensionLevel,
+  ext: ExtensionFlags,
 ): string {
-  return `${root}${renderQuality(quality, level).suffix}`
+  return `${root}${chordSuffix(quality, ext)}`
 }
 
-export interface ExtensionFlags {
-  seventh: boolean
-  ninth: boolean
-  eleventh: boolean
-}
-
-/** Extensions are cumulative — the level is the highest enabled flag. */
-export function levelFromFlags(flags: ExtensionFlags): ExtensionLevel {
-  if (flags.eleventh) return 'eleventh'
-  if (flags.ninth) return 'ninth'
-  if (flags.seventh) return 'seventh'
-  return 'triad'
-}
-
-/** Expand a level into cumulative flags (inverse of levelFromFlags). */
-export function flagsFromLevel(level: ExtensionLevel): ExtensionFlags {
-  return {
-    seventh: level !== 'triad',
-    ninth: level === 'ninth' || level === 'eleventh',
-    eleventh: level === 'eleventh',
+/** Intervals (from the root) making up the chord at the given extensions. */
+export function chordIntervals(
+  quality: Quality,
+  ext: ExtensionFlags,
+): string[] {
+  const fam = family(quality)
+  if (fam !== 'maj' && fam !== 'min' && fam !== 'dom') {
+    return FIXED[fam].intervals
   }
+  const core = CORE[fam]
+  const intervals = ['1P', core.third, core.fifth]
+  if (ext.seventh) intervals.push(core.seventh)
+  if (ext.ninth) intervals.push('9M')
+  if (ext.eleventh) intervals.push('11P')
+  return intervals
+}
+
+/** Spelled note names of the chord at the given extensions. */
+export function chordNotes(
+  root: string,
+  quality: Quality,
+  ext: ExtensionFlags,
+): string[] {
+  return chordIntervals(quality, ext)
+    .map((iv) => Note.transpose(root, iv))
+    .filter((n): n is string => !!n)
 }

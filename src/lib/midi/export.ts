@@ -2,12 +2,13 @@ import MidiWriter from 'midi-writer-js'
 import { Note } from 'tonal'
 import { chordToMidi } from '../audio/voicing'
 import type { Chord } from '../theory/types'
-import type { ExtensionLevel } from '../theory/extensions'
+import type { ExtensionFlags } from '../theory/extensions'
 
 export interface MidiOptions {
   /** Beats each chord lasts (default 2 = a half note at 4/4). */
   beatsPerChord?: number
-  level?: ExtensionLevel
+  /** Extension flags per chord (aligned to `chords`). */
+  extensions?: ExtensionFlags[]
 }
 
 /** midi-writer-js duration code for a number of quarter-note beats. */
@@ -30,17 +31,20 @@ export function progressionToMidi(
   chords: Chord[],
   options: MidiOptions = {},
 ): Uint8Array {
-  const { beatsPerChord = 2, level } = options
+  const { beatsPerChord = 2, extensions } = options
   const track = new MidiWriter.Track()
   const duration = durationForBeats(beatsPerChord)
 
-  for (const chord of chords) {
-    const pitches = chordToMidi(chord, { level, voicing: chord.voicing })
+  chords.forEach((chord, i) => {
+    const pitches = chordToMidi(chord, {
+      extensions: extensions?.[i],
+      voicing: chord.voicing,
+    })
       .map((m) => Note.fromMidi(m))
       .filter((n): n is string => n !== null)
-    if (pitches.length === 0) continue
+    if (pitches.length === 0) return
     track.addEvent(new MidiWriter.NoteEvent({ pitch: pitches, duration }))
-  }
+  })
 
   return new MidiWriter.Writer([track]).buildFile()
 }

@@ -4,19 +4,22 @@ import { candidatesFor, pickCandidate } from '@/lib/theory/substitutions'
 import { STYLES, type Style, type StyleId } from '@/lib/theory/styles'
 import {
   flagsFromLevel,
-  levelFromFlags,
   type ExtensionFlags,
-  type ExtensionLevel,
+  type Extension,
 } from '@/lib/theory/extensions'
 import { type EnvelopeSettings } from '@/lib/audio/envelope'
 
-export type Extension = keyof ExtensionFlags
+export type { Extension } from '@/lib/theory/extensions'
 
-/** One position in the progression: its diatonic chord, an optional swap, and a lock. */
+/**
+ * One position in the progression: its diatonic chord, an optional swap, a lock,
+ * and an optional per-chord extension override (falls back to the global default).
+ */
 export interface ChordSlot {
   base: Chord
   sub: Chord | null
   locked: boolean
+  extensions?: ExtensionFlags
 }
 
 export interface EditorState {
@@ -68,6 +71,7 @@ export type EditorAction =
   | { type: 'setStyle'; style: StyleId }
   | { type: 'toggleStrategy'; id: string }
   | { type: 'toggleExtension'; ext: Extension }
+  | { type: 'toggleChordExtension'; index: number; ext: Extension }
   | { type: 'cycleVoicing'; index: number }
   | { type: 'setEnvelope'; envelope: Partial<EnvelopeSettings> }
   | { type: 'setBpm'; bpm: number }
@@ -80,6 +84,7 @@ export type EditorAction =
         key: KeyContext
         chords: Chord[]
         extensions?: ExtensionFlags
+        chordExtensions?: ExtensionFlags[]
         locked?: boolean[]
       }
     }
@@ -217,6 +222,7 @@ export function editorReducer(
           base: realizeChord(s.base.degree, action.key),
           sub: null,
           locked: s.locked,
+          extensions: s.extensions,
         })),
       }
 
@@ -230,23 +236,28 @@ export function editorReducer(
       return { ...state, enabledStrategies: enabled }
     }
 
-    case 'toggleExtension': {
-      const f = { ...state.extensions }
-      const turningOn = !f[action.ext]
-      f[action.ext] = turningOn
-      if (turningOn) {
-        if (action.ext === 'eleventh') f.ninth = true
-        if (action.ext === 'eleventh' || action.ext === 'ninth')
-          f.seventh = true
-      } else {
-        if (action.ext === 'seventh') {
-          f.ninth = false
-          f.eleventh = false
-        }
-        if (action.ext === 'ninth') f.eleventh = false
+    case 'toggleExtension':
+      // Independent — toggling one extension does not pull in the others.
+      return {
+        ...state,
+        extensions: {
+          ...state.extensions,
+          [action.ext]: !state.extensions[action.ext],
+        },
       }
-      return { ...state, extensions: f }
-    }
+
+    case 'toggleChordExtension':
+      return {
+        ...state,
+        slots: state.slots.map((s, i) => {
+          if (i !== action.index) return s
+          const current = s.extensions ?? state.extensions
+          return {
+            ...s,
+            extensions: { ...current, [action.ext]: !current[action.ext] },
+          }
+        }),
+      }
 
     case 'cycleVoicing': {
       return {
@@ -284,6 +295,7 @@ export function editorReducer(
           base: c,
           sub: null,
           locked: action.song.locked?.[i] ?? false,
+          extensions: action.song.chordExtensions?.[i],
         })),
       }
 
@@ -302,7 +314,15 @@ export function isResultsMode(state: EditorState): boolean {
   return state.slots.some((s) => s.sub !== null)
 }
 
-/** The current extension level derived from the cumulative flags. */
-export function extensionLevel(state: EditorState): ExtensionLevel {
-  return levelFromFlags(state.extensions)
+/** The effective extension flags for a chord: its override, else the global default. */
+export function effectiveExtensions(
+  state: EditorState,
+  index: number,
+): ExtensionFlags {
+  return state.slots[index]?.extensions ?? state.extensions
+}
+
+/** Effective extension flags for every chord, aligned to displayChords(). */
+export function allExtensions(state: EditorState): ExtensionFlags[] {
+  return state.slots.map((s) => s.extensions ?? state.extensions)
 }

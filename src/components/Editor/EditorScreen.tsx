@@ -6,7 +6,12 @@ import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import type { Chord } from '@/lib/theory/types'
 import { useEditor } from '@/state/EditorProvider'
-import { displayChords, isResultsMode, extensionLevel } from '@/state/editor'
+import {
+  displayChords,
+  isResultsMode,
+  allExtensions,
+  effectiveExtensions,
+} from '@/state/editor'
 import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
 import { getStorage } from '@/lib/storage'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
@@ -59,17 +64,21 @@ export function EditorScreen() {
     { scope: root, dependencies: [empty] },
   )
 
-  const level = extensionLevel(state)
+  const extensions = allExtensions(state)
 
-  function handlePlayChord(chord: Chord) {
-    // Spell the chord out one note at a time.
-    playChord(chord, { level, envelope: state.envelope, arpeggio: true })
+  function handlePlayChord(chord: Chord, index: number) {
+    // Spell the chord out one note at a time, at this chord's extensions.
+    playChord(chord, {
+      extensions: effectiveExtensions(state, index),
+      envelope: state.envelope,
+      arpeggio: true,
+    })
   }
 
   function handlePlayAll(toPlay: Chord[]) {
     playProgression(toPlay, {
       bpm: state.bpm,
-      level,
+      extensions,
       envelope: state.envelope,
     })
   }
@@ -77,7 +86,7 @@ export function EditorScreen() {
   function handleExportMidi() {
     // No tempo written — notes are in musical beats, so they land correctly at
     // the user's project tempo without overriding it.
-    const bytes = progressionToMidi(chords, { level })
+    const bytes = progressionToMidi(chords, { extensions })
     downloadMidi(bytes, 'hitme-progression')
   }
 
@@ -87,7 +96,10 @@ export function EditorScreen() {
     dispatch({ type: 'cycleVoicing', index })
     playChord(
       { ...chord, voicing: nextVoicing },
-      { level, envelope: state.envelope },
+      {
+        extensions: effectiveExtensions(state, index),
+        envelope: state.envelope,
+      },
     )
   }
 
@@ -98,6 +110,7 @@ export function EditorScreen() {
       key: state.key,
       chords,
       extensions: state.extensions,
+      chordExtensions: extensions,
       locked: state.slots.map((s) => s.locked),
       createdAt: Date.now(),
     }
@@ -141,7 +154,7 @@ export function EditorScreen() {
           ) : (
             <ChordDisplay
               chords={chords}
-              level={level}
+              extensions={extensions}
               resultsMode={results}
               showGuitar={state.showGuitar}
               showPiano={state.showPiano}
@@ -152,6 +165,9 @@ export function EditorScreen() {
               onCycleVoicing={handleCycleVoicing}
               onToggleLock={(i) => dispatch({ type: 'toggleLock', index: i })}
               onRevert={(i) => dispatch({ type: 'revertChord', index: i })}
+              onToggleExtension={(i, ext) =>
+                dispatch({ type: 'toggleChordExtension', index: i, ext })
+              }
               onShowLesson={(source) => setLesson(lessonForSource(source))}
               removable
               onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}

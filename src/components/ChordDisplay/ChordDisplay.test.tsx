@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChordDisplay } from './ChordDisplay'
 import { realizeChord } from '@/lib/theory/chords'
+import { flagsFromLevel } from '@/lib/theory/extensions'
 import type { KeyContext } from '@/lib/theory/types'
 
 const cMajor: KeyContext = { tonic: 'C', mode: 'major' }
@@ -53,6 +54,18 @@ describe('ChordDisplay', () => {
     expect(onToggleLock).toHaveBeenCalledWith(0)
   })
 
+  it('toggles a per-chord extension (9th independently)', async () => {
+    const onToggleExtension = vi.fn()
+    render(
+      <ChordDisplay chords={chords} onToggleExtension={onToggleExtension} />,
+    )
+    // default = 7th on, 9th off → the 9 chip says "Add 9th on Cmaj7"
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add 9th on Cmaj7' }),
+    )
+    expect(onToggleExtension).toHaveBeenCalledWith(0, 'ninth')
+  })
+
   it('reverts a substituted chord', async () => {
     const onRevert = vi.fn()
     render(
@@ -74,7 +87,12 @@ describe('ChordDisplay', () => {
   })
 
   it('renders chord symbols at the given extension level', () => {
-    render(<ChordDisplay chords={[realizeChord(0, cMajor)]} level="ninth" />)
+    render(
+      <ChordDisplay
+        chords={[realizeChord(0, cMajor)]}
+        extensions={[flagsFromLevel('ninth')]}
+      />,
+    )
     expect(screen.getByText('maj9')).toBeInTheDocument() // Cmaj7 → Cmaj9
   })
 

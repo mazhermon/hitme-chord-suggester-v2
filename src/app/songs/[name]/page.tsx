@@ -6,9 +6,16 @@ import Link from 'next/link'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { playChord, playProgression } from '@/lib/audio/audio-engine'
-import { levelFromFlags } from '@/lib/theory/extensions'
+import { flagsFromLevel, type ExtensionFlags } from '@/lib/theory/extensions'
 import { Button } from '@/components/Button/Button'
 import styles from '../songs.module.css'
+
+/** Per-chord extension flags for a saved song (with sensible fallbacks). */
+function songExtensions(song: Song): ExtensionFlags[] {
+  if (song.chordExtensions) return song.chordExtensions
+  const fallback = song.extensions ?? flagsFromLevel('seventh')
+  return song.chords.map(() => fallback)
+}
 
 export default function SongPage() {
   const params = useParams<{ name: string }>()
@@ -43,17 +50,13 @@ export default function SongPage() {
           <div className={styles.songCanvas}>
             <ChordDisplay
               chords={song.chords}
-              level={
-                song.extensions ? levelFromFlags(song.extensions) : 'seventh'
-              }
+              extensions={songExtensions(song)}
               resultsMode
               showGuitar
               showPiano
-              onPlay={(chord) =>
+              onPlay={(chord, index) =>
                 playChord(chord, {
-                  level: song.extensions
-                    ? levelFromFlags(song.extensions)
-                    : 'seventh',
+                  extensions: songExtensions(song)[index],
                   arpeggio: true,
                 })
               }
@@ -63,9 +66,7 @@ export default function SongPage() {
             <Button
               onClick={() =>
                 playProgression(song.chords, {
-                  level: song.extensions
-                    ? levelFromFlags(song.extensions)
-                    : 'seventh',
+                  extensions: songExtensions(song),
                 })
               }
             >

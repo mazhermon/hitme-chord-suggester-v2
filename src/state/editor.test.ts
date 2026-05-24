@@ -3,7 +3,7 @@ import {
   editorReducer,
   displayChords,
   isResultsMode,
-  extensionLevel,
+  effectiveExtensions,
   type EditorState,
 } from './editor'
 import { STYLES } from '@/lib/theory/styles'
@@ -128,18 +128,32 @@ describe('editorReducer — settings', () => {
     expect(s.envelope.attack).toBe(STYLES.folk.envelope.attack)
   })
 
-  it('cascades extension toggles both ways', () => {
-    let s = editorReducer(initialEditorState, {
+  it('toggles each extension independently (9th without 7th)', () => {
+    // jazz default = { seventh, ninth } on. Turn the 7th off, keep the 9th.
+    const s = editorReducer(initialEditorState, {
       type: 'toggleExtension',
-      ext: 'eleventh',
+      ext: 'seventh',
     })
-    expect(s.extensions).toEqual({ seventh: true, ninth: true, eleventh: true })
-    s = editorReducer(s, { type: 'toggleExtension', ext: 'seventh' })
     expect(s.extensions).toEqual({
       seventh: false,
-      ninth: false,
+      ninth: true, // unchanged — no cascade
       eleventh: false,
     })
+  })
+
+  it('overrides extensions on a single chord, leaving others on the default', () => {
+    let s = withChords([0, 4])
+    s = editorReducer(s, {
+      type: 'toggleChordExtension',
+      index: 0,
+      ext: 'seventh',
+    })
+    // chord 0 now has an override with the 7th flipped off (from the jazz default)
+    expect(effectiveExtensions(s, 0).seventh).toBe(false)
+    expect(effectiveExtensions(s, 0).ninth).toBe(true)
+    // chord 1 still inherits the global default
+    expect(s.slots[1].extensions).toBeUndefined()
+    expect(effectiveExtensions(s, 1)).toEqual(s.extensions)
   })
 
   it('cycles the voicing of a single chord', () => {
@@ -176,8 +190,9 @@ describe('editorReducer — settings', () => {
     expect(displayChords(s).map((c) => c.symbol)).toEqual(['Gmaj7'])
   })
 
-  it('restores the saved extension level + locks (save round-trip)', () => {
+  it('restores saved extensions, per-chord overrides + locks (save round-trip)', () => {
     const triad = { seventh: false, ninth: false, eleventh: false }
+    const add9 = { seventh: false, ninth: true, eleventh: false }
     const s = editorReducer(initialEditorState, {
       type: 'loadSong',
       song: {
@@ -192,14 +207,16 @@ describe('editorReducer — settings', () => {
           },
         ],
         extensions: triad,
+        chordExtensions: [add9],
         locked: [true],
       },
     })
-    expect(extensionLevel(s)).toBe('triad')
+    expect(s.extensions).toEqual(triad) // global default
+    expect(effectiveExtensions(s, 0)).toEqual(add9) // per-chord override
     expect(s.slots[0].locked).toBe(true)
   })
 
-  it('keeps the current level for legacy songs with no saved extensions', () => {
+  it('keeps the current default for legacy songs with no saved extensions', () => {
     const s = editorReducer(initialEditorState, {
       type: 'loadSong',
       song: {
@@ -215,11 +232,15 @@ describe('editorReducer — settings', () => {
         ],
       },
     })
-    // legacy data has no level — adopt the editor's current one so re-saving heals it
-    expect(extensionLevel(s)).toBe(extensionLevel(initialEditorState))
+    // legacy data has no extensions — adopt the editor's current default so re-saving heals it
+    expect(effectiveExtensions(s, 0)).toEqual(initialEditorState.extensions)
   })
 
-  it('exposes the current extension level (jazz default = ninth)', () => {
-    expect(extensionLevel(initialEditorState)).toBe('ninth')
+  it('defaults to a 9th (jazz preset) with the 7th on', () => {
+    expect(initialEditorState.extensions).toEqual({
+      seventh: true,
+      ninth: true,
+      eleventh: false,
+    })
   })
 })

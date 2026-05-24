@@ -161,6 +161,35 @@
   letter-spacing: 0.02em;
 }
 
+/* Per-chord 7/9/11 extension chips. */
+.exts {
+  display: flex;
+  justify-content: center;
+  gap: 0.2rem;
+  margin-top: 0.25rem;
+}
+.extChip {
+  min-width: 20px;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgba(249, 249, 249, 0.3);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--white);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.extChip:hover {
+  opacity: 1;
+}
+.extOn {
+  background: var(--highlight-chord);
+  color: var(--dark);
+  border-color: transparent;
+  opacity: 1;
+}
+
 /* A locked chord is visually pinned and dimmed slightly. */
 .locked .chord {
   opacity: 0.85;

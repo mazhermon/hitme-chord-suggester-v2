@@ -1,6 +1,6 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
 import { DEFAULT_ENVELOPE, type EnvelopeSettings } from './envelope'
-import type { ExtensionLevel } from '../theory/extensions'
+import type { ExtensionFlags } from '../theory/extensions'
 
 /**
  * Web Audio API synth: schedules oscillator + gain "voices" with an ADSR
@@ -44,7 +44,7 @@ export function setMuted(value: boolean): void {
 type PlayableChord = VoiceableChord & { voicing?: number }
 
 interface PlayOptions {
-  level?: ExtensionLevel
+  extensions?: ExtensionFlags
   envelope?: EnvelopeSettings
   duration?: number
   when?: number
@@ -98,7 +98,7 @@ export function playChord(
   options: PlayOptions = {},
 ): void {
   const freqs = chordToFrequencies(chord, {
-    level: options.level,
+    extensions: options.extensions,
     voicing: chord.voicing,
   })
   if (options.arpeggio) {
@@ -120,7 +120,8 @@ export function playChord(
 export interface ProgressionOptions {
   bpm?: number
   beatsPerChord?: number
-  level?: ExtensionLevel
+  /** Extension flags per chord (aligned to `chords`). */
+  extensions?: ExtensionFlags[]
   envelope?: EnvelopeSettings
 }
 
@@ -132,11 +133,11 @@ export function playProgression(
   chords: PlayableChord[],
   options: ProgressionOptions = {},
 ): number {
-  const { bpm = 90, beatsPerChord = 2, level, envelope } = options
+  const { bpm = 90, beatsPerChord = 2, extensions, envelope } = options
   const secondsPerChord = (60 / bpm) * beatsPerChord
   chords.forEach((chord, i) => {
     playChord(chord, {
-      level,
+      extensions: extensions?.[i],
       envelope,
       when: i * secondsPerChord,
       duration: secondsPerChord * 0.95,

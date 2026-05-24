@@ -4,9 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import type { Chord } from '@/lib/theory/types'
 import { romanForDegree } from '@/lib/theory/nashville'
 import {
-  renderQuality,
+  chordSuffix,
   renderSymbol,
-  type ExtensionLevel,
+  isExtendable,
+  flagsFromLevel,
+  type ExtensionFlags,
+  type Extension,
 } from '@/lib/theory/extensions'
 import { VOICING_NAMES, chordToMidi } from '@/lib/audio/voicing'
 import { ARPEGGIO_STEP } from '@/lib/audio/audio-engine'
@@ -15,10 +18,17 @@ import { ChordDiagram } from '@/components/ChordDiagram/ChordDiagram'
 import { PianoChord } from '@/components/PianoChord/PianoChord'
 import styles from './ChordDisplay.module.css'
 
+const DEFAULT_EXT = flagsFromLevel('seventh')
+const EXTENSION_CHIPS: { ext: Extension; label: string }[] = [
+  { ext: 'seventh', label: '7' },
+  { ext: 'ninth', label: '9' },
+  { ext: 'eleventh', label: '11' },
+]
+
 interface ChordDisplayProps {
   chords: Chord[]
-  /** Extension level used to render symbols + audio (default: 7ths). */
-  level?: ExtensionLevel
+  /** Extension flags per chord (aligned to `chords`); defaults to a 7th if absent. */
+  extensions?: ExtensionFlags[]
   resultsMode?: boolean
   /** Show a guitar chord diagram under each chord. */
   showGuitar?: boolean
@@ -32,6 +42,8 @@ interface ChordDisplayProps {
   onCycleVoicing?: (index: number) => void
   onToggleLock?: (index: number) => void
   onRevert?: (index: number) => void
+  /** Toggle a 7/9/11 extension on a single chord. */
+  onToggleExtension?: (index: number, ext: Extension) => void
   /** Open a lesson explaining a chord's `source` provenance. */
   onShowLesson?: (source: string) => void
   removable?: boolean
@@ -40,7 +52,7 @@ interface ChordDisplayProps {
 
 export function ChordDisplay({
   chords,
-  level = 'seventh',
+  extensions,
   resultsMode = false,
   showGuitar = false,
   showPiano = false,
@@ -51,10 +63,12 @@ export function ChordDisplay({
   onCycleVoicing,
   onToggleLock,
   onRevert,
+  onToggleExtension,
   onShowLesson,
   removable = false,
   onRemove,
 }: ChordDisplayProps) {
+  const extAt = (i: number): ExtensionFlags => extensions?.[i] ?? DEFAULT_EXT
   // Which chord is playing + the notes sounding so far, to light the piano in time.
   const [sounding, setSounding] = useState<{
     index: number
@@ -72,7 +86,10 @@ export function ChordDisplay({
     timers.current.forEach(clearTimeout)
     timers.current = []
     const midi = [
-      ...chordToMidi(chord, { level, voicing: chord.voicing }),
+      ...chordToMidi(chord, {
+        extensions: extAt(index),
+        voicing: chord.voicing,
+      }),
     ].sort((a, b) => a - b)
     setSounding({ index, notes: [] })
     midi.forEach((n, i) => {
@@ -108,8 +125,9 @@ export function ChordDisplay({
   return (
     <ul className={cls}>
       {chords.map((chord, i) => {
-        const symbol = renderSymbol(chord.root, chord.quality, level)
-        const suffix = renderQuality(chord.quality, level).suffix
+        const ext = extAt(i)
+        const symbol = renderSymbol(chord.root, chord.quality, ext)
+        const suffix = chordSuffix(chord.quality, ext)
         const isLocked = locked?.[i] ?? false
         const isSub = substituted?.[i] ?? false
         const voicingName =
@@ -205,13 +223,37 @@ export function ChordDisplay({
               )}
             </div>
 
+            {onToggleExtension && isExtendable(chord.quality) && (
+              <div
+                className={styles.exts}
+                role="group"
+                aria-label={`Extensions for ${symbol}`}
+              >
+                {EXTENSION_CHIPS.map(({ ext: e, label }) => (
+                  <button
+                    key={e}
+                    type="button"
+                    className={`${styles.extChip} ${ext[e] ? styles.extOn : ''}`}
+                    aria-pressed={ext[e]}
+                    aria-label={`${ext[e] ? 'Remove' : 'Add'} ${label}th on ${symbol}`}
+                    onClick={() => onToggleExtension(i, e)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {showGuitar && (
               <ChordDiagram {...findGuitarShape(chord)} name={symbol} />
             )}
 
             {showPiano && (
               <PianoChord
-                notes={chordToMidi(chord, { level, voicing: chord.voicing })}
+                notes={chordToMidi(chord, {
+                  extensions: ext,
+                  voicing: chord.voicing,
+                })}
                 active={sounding?.index === i ? sounding.notes : undefined}
                 name={symbol}
               />
