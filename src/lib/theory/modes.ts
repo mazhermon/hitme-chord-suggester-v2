@@ -35,7 +35,7 @@ function rotate<T>(arr: T[], by: number): T[] {
 }
 
 /** Quality table for each mode, derived by rotating the ionian qualities. */
-export const MODE_QUALITIES: Record<ModeName, Quality[]> = MODE_NAMES.reduce(
+const MODE_QUALITIES: Record<ModeName, Quality[]> = MODE_NAMES.reduce(
   (acc, name, index) => {
     acc[name] = rotate(IONIAN_QUALITIES, index)
     return acc

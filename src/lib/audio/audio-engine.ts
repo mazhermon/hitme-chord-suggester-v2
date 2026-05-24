@@ -38,10 +38,6 @@ export function setMuted(value: boolean): void {
   }
 }
 
-export function isMuted(): boolean {
-  return muted
-}
-
 type PlayableChord = VoiceableChord & { voicing?: number }
 
 interface PlayOptions {
