@@ -41,7 +41,7 @@
   font-family: var(--font-display);
   font-size: 0.9rem;
   letter-spacing: 0.08em;
-  opacity: 0.65;
+  opacity: 0.85;
 }
 
 .symbol {
@@ -67,7 +67,7 @@
   font-family: var(--font-display);
   font-style: italic;
   font-size: 0.78rem;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 /* Clickable provenance label that opens the lesson panel. */
@@ -78,7 +78,7 @@
   font-family: var(--font-display);
   font-style: italic;
   font-size: 0.78rem;
-  opacity: 0.6;
+  opacity: 0.85;
   cursor: pointer;
   text-decoration: underline dotted rgba(249, 249, 249, 0.5);
   text-underline-offset: 3px;
@@ -130,7 +130,7 @@
   justify-content: center;
   gap: 0.25rem;
   margin-top: 0.3rem;
-  opacity: 0.4;
+  opacity: 0.75;
   transition: opacity 0.15s var(--ease-out);
 }
 .item:hover .controls,

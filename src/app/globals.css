@@ -7,21 +7,29 @@
   /* Palette */
   --white: #f9f9f9;
   --black: #313331;
-  --green: #83a085;
+  --green: #83a085; /* brand accent (borders, decorative) — not for text backgrounds */
   --green-dark: #5b885e;
   --gray: #7e887c;
   --gray-light: #c9cac9;
   --gray-extra-light: #e4e1e1;
   --dark: #5d665b;
 
+  /*
+   * Text-bearing surfaces are deepened so cream text clears WCAG AA:
+   * white on --green-deep ≈ 6.4:1, on --panel ≈ 7.2:1, on --green-deeper ≈ 9.7:1.
+   */
+  --green-deep: #46624a;
+  --green-deeper: #2f4636;
+  --panel: #3f5a43;
+
   /* Roles */
   --primary: var(--green);
   --secondary: var(--gray);
   --highlight: var(--green-dark);
 
-  /* Backgrounds: light = input mode, deep = results/suggest mode */
-  --bg-input: linear-gradient(-45deg, var(--primary), var(--secondary));
-  --bg-results: linear-gradient(-45deg, #41504170, #2f3a2f);
+  /* Backgrounds: lighter = input mode, deep = results/suggest mode */
+  --bg-input: linear-gradient(-45deg, #4a6b4d, var(--green-deep));
+  --bg-results: linear-gradient(-45deg, #34492f, #2a352a);
 
   /* Type */
   --font-main: var(--font-sans), system-ui, sans-serif;

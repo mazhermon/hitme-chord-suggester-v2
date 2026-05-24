@@ -12,7 +12,7 @@
   bottom: 0;
   width: min(340px, 86vw);
   padding: 1.5rem 1.5rem 2rem;
-  background: var(--green-dark);
+  background: var(--green-deeper);
   color: var(--white);
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.25);
   overflow-y: auto;

@@ -57,9 +57,9 @@
   color: var(--dark);
 }
 
-/* Primary: filled green, light text. */
+/* Primary: filled deep green, light text (white on --green-deep ≈ 6.4:1). */
 .primary .inner {
-  background-color: var(--green-dark);
+  background-color: var(--green-deep);
   color: var(--white);
 }
 
