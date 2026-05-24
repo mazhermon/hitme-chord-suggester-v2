@@ -176,6 +176,49 @@ describe('editorReducer — settings', () => {
     expect(displayChords(s).map((c) => c.symbol)).toEqual(['Gmaj7'])
   })
 
+  it('restores the saved extension level + locks (save round-trip)', () => {
+    const triad = { seventh: false, ninth: false, eleventh: false }
+    const s = editorReducer(initialEditorState, {
+      type: 'loadSong',
+      song: {
+        key: G_MAJOR,
+        chords: [
+          {
+            degree: 0,
+            root: 'G',
+            quality: 'maj7' as const,
+            symbol: 'Gmaj7',
+            source: 'diatonic',
+          },
+        ],
+        extensions: triad,
+        locked: [true],
+      },
+    })
+    expect(extensionLevel(s)).toBe('triad')
+    expect(s.slots[0].locked).toBe(true)
+  })
+
+  it('keeps the current level for legacy songs with no saved extensions', () => {
+    const s = editorReducer(initialEditorState, {
+      type: 'loadSong',
+      song: {
+        key: G_MAJOR,
+        chords: [
+          {
+            degree: 0,
+            root: 'G',
+            quality: 'maj7' as const,
+            symbol: 'Gmaj7',
+            source: 'diatonic',
+          },
+        ],
+      },
+    })
+    // legacy data has no level — adopt the editor's current one so re-saving heals it
+    expect(extensionLevel(s)).toBe(extensionLevel(initialEditorState))
+  })
+
   it('exposes the current extension level (jazz default = ninth)', () => {
     expect(extensionLevel(initialEditorState)).toBe('ninth')
   })
