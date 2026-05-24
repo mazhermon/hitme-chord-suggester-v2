@@ -24,8 +24,8 @@ function setup(props?: Partial<Parameters<typeof ChordDock>[0]>) {
 describe('ChordDock', () => {
   it('adds chords when numeral buttons are pressed', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'I' }))
-    await userEvent.click(screen.getByRole('button', { name: 'IV' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord IV' }))
     expect(screen.getByTestId('count')).toHaveTextContent('2')
   })
 
@@ -33,13 +33,13 @@ describe('ChordDock', () => {
     setup()
     expect(screen.getByRole('button', { name: 'Suggest' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled()
-    await userEvent.click(screen.getByRole('button', { name: 'I' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
     expect(screen.getByRole('button', { name: 'Suggest' })).toBeEnabled()
   })
 
   it('resets the progression', async () => {
     setup()
-    await userEvent.click(screen.getByRole('button', { name: 'I' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
     await userEvent.click(screen.getByRole('button', { name: 'Reset' }))
     expect(screen.getByTestId('count')).toHaveTextContent('0')
   })
@@ -47,7 +47,7 @@ describe('ChordDock', () => {
   it('calls onPlay with the chords on screen', async () => {
     const onPlay = vi.fn()
     setup({ onPlay })
-    await userEvent.click(screen.getByRole('button', { name: 'I' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
     await userEvent.click(screen.getByRole('button', { name: 'Play' }))
     expect(onPlay).toHaveBeenCalledTimes(1)
     expect(onPlay.mock.calls[0][0]).toHaveLength(1)
@@ -56,7 +56,7 @@ describe('ChordDock', () => {
   it('calls onSave', async () => {
     const onSave = vi.fn()
     setup({ onSave })
-    await userEvent.click(screen.getByRole('button', { name: 'I' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledTimes(1)
   })

@@ -24,6 +24,7 @@ export function ChordDock({ onPlay, onSave }: ChordDockProps) {
           <li key={roman}>
             <Button
               variant="ghost"
+              aria-label={`Add chord ${roman}`}
               onClick={() => dispatch({ type: 'addChord', degree })}
             >
               {roman}

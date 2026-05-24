@@ -94,6 +94,16 @@ button {
   font-family: inherit;
 }
 
+/*
+ * Baseline visible keyboard-focus indicator for any interactive element that
+ * doesn't define its own (low specificity via :where so components can override).
+ */
+:where(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

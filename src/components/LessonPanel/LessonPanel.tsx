@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import type { Lesson } from '@/lib/theory/lessons'
 import styles from './LessonPanel.module.css'
 
@@ -10,6 +11,15 @@ interface LessonPanelProps {
 
 /** Right-side panel with a short music-theory lesson for a chord's provenance. */
 export function LessonPanel({ lesson, onClose }: LessonPanelProps) {
+  useEffect(() => {
+    if (!lesson) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [lesson, onClose])
+
   if (!lesson) return null
   return (
     <>
