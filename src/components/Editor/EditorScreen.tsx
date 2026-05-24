@@ -9,9 +9,11 @@ import { useEditor } from '@/state/EditorProvider'
 import { displayChords, isResultsMode, extensionLevel } from '@/state/editor'
 import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
 import { getStorage } from '@/lib/storage'
+import { lessonForSource, type Lesson } from '@/lib/theory/lessons'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { ChordDock } from '@/components/ChordDock/ChordDock'
 import { KeyDrawer } from '@/components/KeyDrawer/KeyDrawer'
+import { LessonPanel } from '@/components/LessonPanel/LessonPanel'
 import { SaveDialog } from '@/components/SaveDialog/SaveDialog'
 import styles from './EditorScreen.module.css'
 
@@ -20,6 +22,7 @@ export function EditorScreen() {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const [lesson, setLesson] = useState<Lesson | null>(null)
   const root = useRef<HTMLDivElement>(null)
 
   const chords = displayChords(state)
@@ -58,7 +61,8 @@ export function EditorScreen() {
   const level = extensionLevel(state)
 
   function handlePlayChord(chord: Chord) {
-    playChord(chord, { level, envelope: state.envelope })
+    // Spell the chord out one note at a time.
+    playChord(chord, { level, envelope: state.envelope, arpeggio: true })
   }
 
   function handlePlayAll(toPlay: Chord[]) {
@@ -85,6 +89,8 @@ export function EditorScreen() {
       name,
       key: state.key,
       chords,
+      extensions: state.extensions,
+      locked: state.slots.map((s) => s.locked),
       createdAt: Date.now(),
     }
     await getStorage().save(song)
@@ -134,6 +140,7 @@ export function EditorScreen() {
               onCycleVoicing={handleCycleVoicing}
               onToggleLock={(i) => dispatch({ type: 'toggleLock', index: i })}
               onRevert={(i) => dispatch({ type: 'revertChord', index: i })}
+              onShowLesson={(source) => setLesson(lessonForSource(source))}
               removable
               onRemove={(i) => dispatch({ type: 'removeChordAt', index: i })}
             />
@@ -142,6 +149,8 @@ export function EditorScreen() {
 
         <ChordDock onPlay={handlePlayAll} onSave={() => setSaveOpen(true)} />
       </div>
+
+      <LessonPanel lesson={lesson} onClose={() => setLesson(null)} />
 
       <SaveDialog
         open={saveOpen}

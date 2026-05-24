@@ -1,4 +1,5 @@
 import type { Chord, KeyContext } from '../theory/types'
+import type { ExtensionFlags } from '../theory/extensions'
 
 /** A saved progression. */
 export interface Song {
@@ -7,6 +8,10 @@ export interface Song {
   key: KeyContext
   chords: Chord[]
   createdAt: number
+  /** Extension level the chords were shown at (so 9ths/11ths survive a save). */
+  extensions?: ExtensionFlags
+  /** Which chords were locked, by index. */
+  locked?: boolean[]
 }
 
 /** Minimal key/value backend (a subset of the Web Storage API). */

@@ -71,7 +71,15 @@ export type EditorAction =
   | { type: 'setBpm'; bpm: number }
   | { type: 'toggleMute' }
   | { type: 'toggleGuitar' }
-  | { type: 'loadSong'; song: { key: KeyContext; chords: Chord[] } }
+  | {
+      type: 'loadSong'
+      song: {
+        key: KeyContext
+        chords: Chord[]
+        extensions?: ExtensionFlags
+        locked?: boolean[]
+      }
+    }
 
 function shown(slot: ChordSlot): Chord {
   return slot.sub ?? slot.base
@@ -265,10 +273,11 @@ export function editorReducer(
       return {
         ...state,
         key: action.song.key,
-        slots: action.song.chords.map((c) => ({
+        extensions: action.song.extensions ?? state.extensions,
+        slots: action.song.chords.map((c, i) => ({
           base: c,
           sub: null,
-          locked: false,
+          locked: action.song.locked?.[i] ?? false,
         })),
       }
 

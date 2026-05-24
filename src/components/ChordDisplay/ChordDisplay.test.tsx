@@ -17,11 +17,20 @@ describe('ChordDisplay', () => {
     expect(screen.getAllByText('diatonic')).toHaveLength(2)
   })
 
-  it('swaps a chord when its cluster is clicked', async () => {
+  it('swaps a chord via its swap control', async () => {
     const onSwap = vi.fn()
     render(<ChordDisplay chords={chords} onSwap={onSwap} />)
     await userEvent.click(screen.getByRole('button', { name: /Swap Cmaj7/ }))
     expect(onSwap).toHaveBeenCalledWith(0)
+  })
+
+  it('opens a lesson when the source label is clicked', async () => {
+    const onShowLesson = vi.fn()
+    render(<ChordDisplay chords={chords} onShowLesson={onShowLesson} />)
+    await userEvent.click(
+      screen.getAllByRole('button', { name: /About diatonic/i })[0],
+    )
+    expect(onShowLesson).toHaveBeenCalledWith('diatonic')
   })
 
   it('plays a chord via its play control', async () => {

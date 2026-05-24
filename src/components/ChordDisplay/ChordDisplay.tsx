@@ -22,12 +22,13 @@ interface ChordDisplayProps {
   /** Per-index flags for editor controls. */
   locked?: boolean[]
   substituted?: boolean[]
-  /** Primary cluster action — swap just this chord. */
   onSwap?: (index: number) => void
   onPlay?: (chord: Chord, index: number) => void
   onCycleVoicing?: (index: number) => void
   onToggleLock?: (index: number) => void
   onRevert?: (index: number) => void
+  /** Open a lesson explaining a chord's `source` provenance. */
+  onShowLesson?: (source: string) => void
   removable?: boolean
   onRemove?: (index: number) => void
 }
@@ -44,6 +45,7 @@ export function ChordDisplay({
   onCycleVoicing,
   onToggleLock,
   onRevert,
+  onShowLesson,
   removable = false,
   onRemove,
 }: ChordDisplayProps) {
@@ -71,16 +73,7 @@ export function ChordDisplay({
 
         return (
           <li key={`${chord.symbol}-${i}`} className={itemCls}>
-            <button
-              type="button"
-              className={styles.chord}
-              aria-label={
-                onSwap
-                  ? `Swap ${symbol} (${chord.source})`
-                  : `${symbol}, ${chord.source}`
-              }
-              onClick={() => onSwap?.(i)}
-            >
+            <div className={styles.chord}>
               <span className={styles.numeral}>
                 {romanForDegree(chord.degree)}
               </span>
@@ -88,8 +81,20 @@ export function ChordDisplay({
                 <span className={styles.root}>{chord.root}</span>
                 <span className={styles.quality}>{suffix}</span>
               </span>
-              <span className={styles.source}>{chord.source}</span>
-            </button>
+              {onShowLesson ? (
+                <button
+                  type="button"
+                  className={styles.source}
+                  aria-label={`About ${chord.source}`}
+                  title="What is this?"
+                  onClick={() => onShowLesson(chord.source)}
+                >
+                  {chord.source}
+                </button>
+              ) : (
+                <span className={styles.sourceText}>{chord.source}</span>
+              )}
+            </div>
 
             <div className={styles.controls}>
               {onPlay && (
@@ -101,6 +106,17 @@ export function ChordDisplay({
                   onClick={() => onPlay(chord, i)}
                 >
                   ▶
+                </button>
+              )}
+              {onSwap && (
+                <button
+                  type="button"
+                  className={styles.ctrl}
+                  aria-label={`Swap ${symbol}`}
+                  title="Swap this chord"
+                  onClick={() => onSwap(i)}
+                >
+                  ⇄
                 </button>
               )}
               {onCycleVoicing && (

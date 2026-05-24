@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { playChord, playProgression } from '@/lib/audio/audio-engine'
+import { levelFromFlags } from '@/lib/theory/extensions'
 import { Button } from '@/components/Button/Button'
 import styles from '../songs.module.css'
 
@@ -42,13 +43,33 @@ export default function SongPage() {
           <div className={styles.songCanvas}>
             <ChordDisplay
               chords={song.chords}
+              level={
+                song.extensions ? levelFromFlags(song.extensions) : 'seventh'
+              }
               resultsMode
               showGuitar
-              onPlay={(chord) => playChord(chord)}
+              onPlay={(chord) =>
+                playChord(chord, {
+                  level: song.extensions
+                    ? levelFromFlags(song.extensions)
+                    : 'seventh',
+                  arpeggio: true,
+                })
+              }
             />
           </div>
           <div className={styles.songActions}>
-            <Button onClick={() => playProgression(song.chords)}>Play</Button>
+            <Button
+              onClick={() =>
+                playProgression(song.chords, {
+                  level: song.extensions
+                    ? levelFromFlags(song.extensions)
+                    : 'seventh',
+                })
+              }
+            >
+              Play
+            </Button>
             <Button variant="primary" onClick={openInEditor}>
               Open in editor
             </Button>

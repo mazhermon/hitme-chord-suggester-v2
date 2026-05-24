@@ -21,16 +21,9 @@
   justify-items: center;
   gap: 0.15rem;
   padding: 0.4rem 0.6rem;
-  border: 0;
-  background: transparent;
   color: var(--white);
-  cursor: pointer;
   text-align: center;
-  transition: transform 0.18s var(--ease-out);
   animation: chordIn 0.24s var(--ease-out) both;
-}
-.chord:hover {
-  transform: translateY(-3px);
 }
 
 @keyframes chordIn {
@@ -42,11 +35,6 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-.chord:focus-visible {
-  outline: 2px solid rgba(249, 249, 249, 0.6);
-  outline-offset: 6px;
-  border-radius: 8px;
 }
 
 .numeral {
@@ -75,11 +63,29 @@
   margin-left: 0.08em;
 }
 
-.source {
+.sourceText {
   font-family: var(--font-display);
   font-style: italic;
   font-size: 0.78rem;
   opacity: 0.6;
+}
+
+/* Clickable provenance label that opens the lesson panel. */
+.source {
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.78rem;
+  opacity: 0.6;
+  cursor: pointer;
+  text-decoration: underline dotted rgba(249, 249, 249, 0.5);
+  text-underline-offset: 3px;
+}
+.source:hover,
+.source:focus-visible {
+  opacity: 1;
 }
 
 /* More chords → tighter type so they keep fitting. */

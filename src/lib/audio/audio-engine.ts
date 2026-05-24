@@ -50,6 +50,10 @@ interface PlayOptions {
   duration?: number
   when?: number
   gain?: number
+  /** Spell the chord out one note at a time instead of as a block. */
+  arpeggio?: boolean
+  /** Seconds between arpeggiated notes. */
+  strum?: number
 }
 
 function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
@@ -98,6 +102,19 @@ export function playChord(
     level: options.level,
     voicing: chord.voicing,
   })
+  if (options.arpeggio) {
+    // Spell the chord out, low to high.
+    const step = options.strum ?? 0.16
+    const base = options.when ?? 0
+    freqs.forEach((f, i) =>
+      playFrequencies([f], {
+        ...options,
+        when: base + i * step,
+        duration: options.duration ?? 0.6,
+      }),
+    )
+    return
+  }
   playFrequencies(freqs, options)
 }
 
