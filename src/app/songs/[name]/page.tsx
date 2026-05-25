@@ -6,8 +6,14 @@ import Link from 'next/link'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { playChord, playProgression } from '@/lib/audio/audio-engine'
+import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
+import {
+  exportProgressionVideo,
+  progressionBasename,
+} from '@/lib/video/record'
 import { flagsFromLevel, type ExtensionFlags } from '@/lib/theory/extensions'
 import { Button } from '@/components/Button/Button'
+import { VideoModal } from '@/components/VideoModal/VideoModal'
 import styles from '../songs.module.css'
 
 /** Per-chord extension flags for a saved song (with sensible fallbacks). */
@@ -22,6 +28,8 @@ export default function SongPage() {
   const router = useRouter()
   const name = decodeURIComponent(params.name)
   const [song, setSong] = useState<Song | null | undefined>(undefined)
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
+  const [videoBusy, setVideoBusy] = useState(false)
 
   useEffect(() => {
     getStorage().get(name).then(setSong)
@@ -31,6 +39,29 @@ export default function SongPage() {
     if (!song) return
     sessionStorage.setItem('chordhelper.load', song.id)
     router.push('/')
+  }
+
+  function handleExportMidi() {
+    if (!song) return
+    const bytes = progressionToMidi(song.chords, {
+      extensions: songExtensions(song),
+    })
+    downloadMidi(bytes, progressionBasename(song.name))
+  }
+
+  async function handleExportVideo() {
+    if (!song || videoBusy) return
+    setVideoBusy(true)
+    try {
+      const blob = await exportProgressionVideo(song.chords, {
+        extensions: songExtensions(song),
+      })
+      setVideoBlob(blob)
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Video export failed.')
+    } finally {
+      setVideoBusy(false)
+    }
   }
 
   return (
@@ -72,12 +103,24 @@ export default function SongPage() {
             >
               Play
             </Button>
+            <Button variant="ghost" onClick={handleExportMidi}>
+              MIDI
+            </Button>
+            <Button variant="ghost" onClick={handleExportVideo} disabled={videoBusy}>
+              {videoBusy ? 'Recording…' : 'Video'}
+            </Button>
             <Button variant="primary" onClick={openInEditor}>
               Open in editor
             </Button>
           </div>
         </>
       )}
+
+      <VideoModal
+        blob={videoBlob}
+        basename={progressionBasename(song?.name)}
+        onClose={() => setVideoBlob(null)}
+      />
     </main>
   )
 }

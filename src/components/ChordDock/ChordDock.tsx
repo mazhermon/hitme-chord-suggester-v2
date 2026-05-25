@@ -11,9 +11,18 @@ interface ChordDockProps {
   onPlay: (chords: Chord[]) => void
   onSave: () => void
   onExportMidi?: () => void
+  onExportVideo?: () => void
+  /** True while a video is recording (real-time), to show progress + disable. */
+  videoBusy?: boolean
 }
 
-export function ChordDock({ onPlay, onSave, onExportMidi }: ChordDockProps) {
+export function ChordDock({
+  onPlay,
+  onSave,
+  onExportMidi,
+  onExportVideo,
+  videoBusy = false,
+}: ChordDockProps) {
   const { state, dispatch } = useEditor()
   const chords = displayChords(state)
   const hasChords = chords.length > 0
@@ -57,6 +66,14 @@ export function ChordDock({ onPlay, onSave, onExportMidi }: ChordDockProps) {
           title="Download a .mid file to drag into your DAW"
         >
           MIDI
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => onExportVideo?.()}
+          disabled={!hasChords || videoBusy}
+          title="Export a shareable 9:16 video of this progression"
+        >
+          {videoBusy ? 'Recording…' : 'Video'}
         </Button>
         <Button variant="primary" onClick={onSave} disabled={!hasChords}>
           Save

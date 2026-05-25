@@ -190,6 +190,26 @@ describe('editorReducer — settings', () => {
     expect(displayChords(s).map((c) => c.symbol)).toEqual(['Gmaj7'])
   })
 
+  it('shifts the playback octave, clamped to ±2', () => {
+    expect(initialEditorState.octave).toBe(0)
+    let s = editorReducer(initialEditorState, { type: 'setOctave', octave: 1 })
+    expect(s.octave).toBe(1)
+    s = editorReducer(s, { type: 'setOctave', octave: 9 })
+    expect(s.octave).toBe(2)
+    s = editorReducer(s, { type: 'setOctave', octave: -9 })
+    expect(s.octave).toBe(-2)
+  })
+
+  it('tracks the song name (set on load, cleared on reset)', () => {
+    expect(initialEditorState.name).toBeNull()
+    const loaded = editorReducer(initialEditorState, {
+      type: 'loadSong',
+      song: { name: 'My Cool Song', key: G_MAJOR, chords: [] },
+    })
+    expect(loaded.name).toBe('My Cool Song')
+    expect(editorReducer(loaded, { type: 'reset' }).name).toBeNull()
+  })
+
   it('restores saved extensions, per-chord overrides + locks (save round-trip)', () => {
     const triad = { seventh: false, ninth: false, eleventh: false }
     const add9 = { seventh: false, ninth: true, eleventh: false }

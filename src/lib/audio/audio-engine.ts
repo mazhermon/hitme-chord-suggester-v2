@@ -41,6 +41,19 @@ export function setMuted(value: boolean): void {
   }
 }
 
+/**
+ * Tap the master output into a MediaStream so the synth can be recorded into a
+ * video. The caller owns the node and must `.disconnect()` it when done so the
+ * tap doesn't linger across exports. Returns null when audio is unavailable.
+ */
+export function createCaptureNode(): MediaStreamAudioDestinationNode | null {
+  const audio = getAudioContext()
+  if (!audio || !masterGain) return null
+  const dest = audio.createMediaStreamDestination()
+  masterGain.connect(dest)
+  return dest
+}
+
 type PlayableChord = VoiceableChord & { voicing?: number }
 
 interface PlayOptions {
@@ -49,6 +62,8 @@ interface PlayOptions {
   duration?: number
   when?: number
   gain?: number
+  /** Octave the voicing is built on (default 4); shift to pitch up/down. */
+  baseOctave?: number
   /** Spell the chord out one note at a time instead of as a block. */
   arpeggio?: boolean
   /** Seconds between arpeggiated notes. */
@@ -100,6 +115,7 @@ export function playChord(
   const freqs = chordToFrequencies(chord, {
     extensions: options.extensions,
     voicing: chord.voicing,
+    baseOctave: options.baseOctave,
   })
   if (options.arpeggio) {
     // Spell the chord out, low to high.
@@ -123,6 +139,8 @@ export interface ProgressionOptions {
   /** Extension flags per chord (aligned to `chords`). */
   extensions?: ExtensionFlags[]
   envelope?: EnvelopeSettings
+  /** Octave the voicing is built on (default 4); shift to pitch up/down. */
+  baseOctave?: number
 }
 
 /**
@@ -133,12 +151,14 @@ export function playProgression(
   chords: PlayableChord[],
   options: ProgressionOptions = {},
 ): number {
-  const { bpm = 90, beatsPerChord = 2, extensions, envelope } = options
+  const { bpm = 90, beatsPerChord = 2, extensions, envelope, baseOctave } =
+    options
   const secondsPerChord = (60 / bpm) * beatsPerChord
   chords.forEach((chord, i) => {
     playChord(chord, {
       extensions: extensions?.[i],
       envelope,
+      baseOctave,
       when: i * secondsPerChord,
       duration: secondsPerChord * 0.95,
     })

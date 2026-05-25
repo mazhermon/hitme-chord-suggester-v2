@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hit me — Growth Roadmap</title>
+<style>
+  :root{
+    --white:#f9f9f9; --green:#83a085; --green-deep:#46624a; --green-deeper:#2f4636;
+    --panel:#3f5a43; --highlight:#6fae9f; --amber:#e6a23c; --ink:#eef2ee;
+    --muted:#c7d3c6;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; color:var(--ink); min-height:100%;
+    background:linear-gradient(160deg,#3d5538,#2a352a);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:clamp(24px,5vw,64px) clamp(18px,5vw,40px) 96px;}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif; color:#fff; line-height:1.2;}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem); margin:0 0 .2em;}
+  .tag{display:inline-block; font-family:inherit; font-size:.78rem; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--green-deeper); background:var(--highlight);
+    padding:.35em .8em; border-radius:34px; font-weight:700;}
+  .lede{font-size:1.18rem; color:var(--muted); max-width:64ch; margin:.8em 0 0;}
+  .note{background:rgba(230,162,60,.13); border-left:3px solid var(--amber);
+    padding:.9em 1.1em; border-radius:6px; margin:1.4em 0; color:#f4e8d2;}
+  section{margin-top:clamp(40px,7vw,72px);}
+  h2{font-size:clamp(1.5rem,4vw,2.1rem); margin:0 0 .15em; display:flex; align-items:baseline; gap:.5em;}
+  h2 .num{font-size:.9rem; color:var(--highlight); font-family:inherit;}
+  .sub{color:var(--muted); margin:.2em 0 1.4em;}
+
+  /* recommendation cards */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px;}
+  .card{background:var(--panel); border:1px solid rgba(255,255,255,.08);
+    border-radius:12px; padding:18px 18px 16px; box-shadow:0 2px 14px rgba(0,0,0,.25);}
+  .card h3{font-size:1.05rem; margin:0 0 .1em; color:#fff;}
+  .card .pick{font-family:Georgia,serif; font-size:1.25rem; color:var(--highlight); margin:.1em 0 .4em;}
+  .card p{margin:0; font-size:.92rem; color:var(--muted);}
+
+  /* timeline */
+  .timeline{position:relative; margin:0; padding:0; list-style:none;}
+  .timeline::before{content:""; position:absolute; left:18px; top:8px; bottom:8px; width:2px;
+    background:linear-gradient(var(--highlight),var(--green));}
+  .phase{position:relative; padding:0 0 26px 56px;}
+  .phase::before{content:""; position:absolute; left:11px; top:4px; width:16px; height:16px;
+    border-radius:50%; background:var(--highlight); border:3px solid var(--green-deeper);}
+  .phase h3{margin:0 0 .1em; font-size:1.15rem;}
+  .phase .meta{font-size:.82rem; color:var(--highlight); letter-spacing:.02em; margin:.1em 0 .35em;}
+  .phase p{margin:0; color:var(--muted); font-size:.95rem;}
+  .phase.future::before{background:var(--green); opacity:.7;}
+
+  /* tables */
+  table{width:100%; border-collapse:collapse; margin:.6em 0; font-size:.94rem;}
+  th,td{text-align:left; padding:.6em .7em; border-bottom:1px solid rgba(255,255,255,.1); vertical-align:top;}
+  th{color:#fff; font-weight:700;}
+  td.num,th.num{white-space:nowrap;}
+  tfoot td{font-weight:700; color:var(--highlight); border-bottom:none;}
+
+  .crit{background:var(--green-deep); border-radius:12px; padding:6px 22px 14px; margin-top:1em;}
+  .crit li{margin:.7em 0; color:var(--ink);}
+  .crit b{color:#fff;}
+
+  .pill{display:inline-block; background:var(--green-deeper); color:var(--highlight);
+    border:1px solid var(--highlight); border-radius:34px; padding:.5em 1em; font-weight:700; margin:.2em .3em .2em 0;}
+  a{color:var(--highlight);}
+  .ask{background:var(--panel); border:1px dashed var(--highlight); border-radius:12px; padding:6px 22px 18px;}
+  .ask ol{margin:.4em 0; padding-left:1.2em;} .ask li{margin:.6em 0;}
+  footer{margin-top:64px; padding-top:20px; border-top:1px solid rgba(255,255,255,.12);
+    color:var(--muted); font-size:.85rem;}
+  .breakeven{font-family:Georgia,serif; font-size:clamp(1.3rem,3.5vw,1.8rem); color:#fff; margin:.3em 0;}
+  .breakeven b{color:var(--highlight);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="tag">Planning · nothing built yet</span>
+  <h1>Hit me — Growth Roadmap</h1>
+  <p class="lede">Research and a phased plan for: a real database for multiple users,
+  social-video export, a feedback channel, and making the app pay for itself — without
+  over-engineering, and keeping the cost to each user very low.</p>
+
+  <div class="note"><b>The one idea to take away:</b> the obvious build order
+  (database → accounts → video) is backwards. The app already works offline on
+  <code>localStorage</code>. So we ship the cheapest, demand-revealing things first
+  (feedback + a tip jar) and only spend money once people show they want more.</div>
+
+  <!-- RECOMMENDATIONS -->
+  <section>
+    <h2><span class="num">01</span> Recommendations at a glance</h2>
+    <div class="cards">
+      <div class="card"><h3>Database</h3><div class="pick">Supabase</div>
+        <p>Postgres + Auth + Row-Level Security. Real data integrity, security enforced
+        inside the database, one vendor. Drops in behind the storage interface we already have.</p></div>
+      <div class="card"><h3>Accounts</h3><div class="pick">Supabase Auth</div>
+        <p>Free to 50k users. RLS does half the authorization for us. No signup needed to
+        start — accounts are additive.</p></div>
+      <div class="card"><h3>Video export</h3><div class="pick">Browser → Remotion</div>
+        <p>Record in the browser for $0 to prove demand, then move to Remotion + AWS Lambda
+        for polished MP4s at pennies each.</p></div>
+      <div class="card"><h3>Feedback</h3><div class="pick">In-app widget</div>
+        <p>One small form → one database table. Cheapest possible, and it ships <em>first</em>
+        so it steers what we build next.</p></div>
+      <div class="card"><h3>Money</h3><div class="pick">Tip jar → Supporter</div>
+        <p>Start with a Ko-fi "buy me a coffee" link. Later a gentle ~$2–3/mo tier for
+        storage &amp; export. Core tool free forever.</p></div>
+      <div class="card"><h3>Growth</h3><div class="pick">The product itself</div>
+        <p>Shareable watermarked videos + SEO pages built from the lesson content already
+        in the app. It markets itself.</p></div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section>
+    <h2><span class="num">02</span> Build order — by cost &amp; risk</h2>
+    <p class="sub">Each phase is gated on evidence from the one before it.</p>
+    <ul class="timeline">
+      <li class="phase">
+        <h3>Phase 0 · Feedback widget + Ko-fi tip jar</h3>
+        <div class="meta">cost ~$0 · risk none</div>
+        <p>Learn what to build and validate that people care — before spending anything.</p>
+      </li>
+      <li class="phase">
+        <h3>Phase 1 · Accounts + cloud sync</h3>
+        <div class="meta">cost $0 → $25/mo (+ Vercel Pro $20 at monetisation) · risk low</div>
+        <p>Supabase + RLS, only once people ask to sync songs across devices. One-time
+        "import my local songs" on first sign-in.</p>
+      </li>
+      <li class="phase">
+        <h3>Phase 2 · "Supporter" tier</h3>
+        <div class="meta">cost ~5% payment fee · risk low</div>
+        <p>~$2–3/mo (or a $20 lifetime): unlimited saves, export, cloud sync. Via a
+        merchant-of-record (Lemon Squeezy/Paddle) so tax/VAT is handled for us.</p>
+      </li>
+      <li class="phase">
+        <h3>Phase 3 · Social video — browser MVP</h3>
+        <div class="meta">cost ~$0 · risk medium</div>
+        <p>Capture the chord animation + audio in the browser to a shareable, watermarked
+        clip. Every share is an ad — the growth loop.</p>
+      </li>
+      <li class="phase future">
+        <h3>Phase 4 · Remotion + Lambda render</h3>
+        <div class="meta">cost pennies/video (+ check Remotion company licence) · risk medium</div>
+        <p>Only if Phase 3 gets used: clean MP4s at any aspect ratio, rendered serverlessly
+        at scale.</p>
+      </li>
+    </ul>
+  </section>
+
+  <!-- COST -->
+  <section>
+    <h2><span class="num">03</span> What it costs — and break-even</h2>
+    <table>
+      <thead><tr><th>Item</th><th>When</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Domain (already owned)</td><td>now</td><td class="num">~$12/yr</td></tr>
+        <tr><td>Vercel Hobby</td><td>while non-commercial</td><td class="num">$0</td></tr>
+        <tr><td>Vercel Pro <em>(required once we accept money)</em></td><td>at monetisation</td><td class="num">$20/mo</td></tr>
+        <tr><td>Supabase</td><td>free → Pro when traffic justifies</td><td class="num">$0 → $25/mo</td></tr>
+        <tr><td>Email (Resend), analytics (Plausible/Vercel)</td><td>optional</td><td class="num">~$0</td></tr>
+        <tr><td>Remotion Lambda video (Phase 4)</td><td>per render</td><td class="num">~pennies</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="2">Realistic monthly run-cost once monetised</td><td class="num">≈ $20–45/mo</td></tr></tfoot>
+    </table>
+    <p class="breakeven">Break-even ≈ <b>10–15 supporters at $3/mo.</b></p>
+    <div class="note">⚠️ <b>Gotcha:</b> Vercel's free <em>Hobby</em> plan is non-commercial only.
+    The moment a "Buy me a coffee" link appears, hosting must move to Vercel Pro ($20/mo).</div>
+  </section>
+
+  <!-- WHERE WE CHARGE -->
+  <section>
+    <h2><span class="num">04</span> Free forever vs. Supporter</h2>
+    <p class="sub">We never paywall songwriting — only convenience, storage and export.</p>
+    <table>
+      <thead><tr><th>Free (always)</th><th>Supporter (~$2–3/mo)</th></tr></thead>
+      <tbody>
+        <tr><td>Full chord engine, Suggest, all 12 keys</td><td>Unlimited saved songs (free caps ~10)</td></tr>
+        <tr><td>Playback, piano &amp; guitar diagrams</td><td>MIDI + social-video export</td></tr>
+        <tr><td>Save locally / a few cloud songs</td><td>Extra genres, voicings, ADSR presets</td></tr>
+        <tr><td>No signup to start</td><td>Cloud sync across devices</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CRITIQUE -->
+  <section>
+    <h2><span class="num">05</span> Where I pushed back on my own plan</h2>
+    <ul class="crit">
+      <li><b>Don't build accounts/video before demand.</b> The tool works offline today;
+      building persistence first would be over-engineering. → Feedback + tip jar lead.</li>
+      <li><b>Supabase's free tier sleeps after ~1 week idle.</b> Bad for a quiet launch. →
+      A daily Vercel Cron keep-alive ping, upgrade to Pro once traffic is steady.</li>
+      <li><b>Don't render video on a Vercel function</b> (CPU/timeout/bandwidth). → Offload
+      to Lambda; Vercel just starts the job and serves the link.</li>
+      <li><b>Remotion needs a paid licence for larger companies.</b> → Browser
+      <code>MediaRecorder</code> MVP first; it has no such string.</li>
+      <li><b>A stingy free tier kills word-of-mouth.</b> → Set the free save cap high enough
+      that only power users (the people happy to pay) ever meet the upgrade prompt.</li>
+      <li><b>Tax/VAT is a silent liability.</b> → Use a merchant-of-record, not raw Stripe.</li>
+    </ul>
+  </section>
+
+  <!-- DECISIONS -->
+  <section>
+    <h2><span class="num">06</span> Your call</h2>
+    <div class="ask">
+      <ol>
+        <li><b>Database:</b> go with <span class="pill">Supabase</span> (my pick — integrity + RLS),
+        or keep the already-scaffolded <span class="pill">Firebase</span> (zero migration)?</li>
+        <li><b>Monetisation appetite:</b> tip jar only, or tip jar → Supporter tier?</li>
+        <li><b>Timing for accounts:</b> build now, or wait until people ask to sync across devices?</li>
+      </ol>
+      <p>Once you choose, the next step is to run brainstorming → spec → implementation plan
+      on <b>Phase 0/1 only</b> — not the whole roadmap at once — and build from there.</p>
+    </div>
+  </section>
+
+  <footer>
+    Detailed write-ups: <code>docs/roadmap/01-database-and-auth.md</code> ·
+    <code>02-social-video-export.md</code> · <code>03-feedback-and-business-model.md</code> ·
+    <code>00-roadmap.md</code>. This page is a temporary presentation artifact served from
+    <code>public/roadmap.html</code> — safe to delete once reviewed.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -13,9 +13,13 @@ import {
   effectiveExtensions,
 } from '@/state/editor'
 import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
+import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
 import { getStorage } from '@/lib/storage'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
+import { exportProgressionVideo, progressionBasename } from '@/lib/video/record'
 import { lessonForSource, type Lesson } from '@/lib/theory/lessons'
+import { BetaBanner } from '@/components/BetaBanner/BetaBanner'
+import { VideoModal } from '@/components/VideoModal/VideoModal'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { ChordDock } from '@/components/ChordDock/ChordDock'
 import { KeyDrawer } from '@/components/KeyDrawer/KeyDrawer'
@@ -29,6 +33,8 @@ export function EditorScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [lesson, setLesson] = useState<Lesson | null>(null)
+  const [videoBusy, setVideoBusy] = useState(false)
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
   const root = useRef<HTMLDivElement>(null)
 
   const chords = displayChords(state)
@@ -65,12 +71,14 @@ export function EditorScreen() {
   )
 
   const extensions = allExtensions(state)
+  const baseOctave = DEFAULT_BASE_OCTAVE + state.octave
 
   function handlePlayChord(chord: Chord, index: number) {
     // Spell the chord out one note at a time, at this chord's extensions.
     playChord(chord, {
       extensions: effectiveExtensions(state, index),
       envelope: state.envelope,
+      baseOctave,
       arpeggio: true,
     })
   }
@@ -80,14 +88,34 @@ export function EditorScreen() {
       bpm: state.bpm,
       extensions,
       envelope: state.envelope,
+      baseOctave,
     })
   }
 
   function handleExportMidi() {
     // No tempo written — notes are in musical beats, so they land correctly at
     // the user's project tempo without overriding it.
-    const bytes = progressionToMidi(chords, { extensions })
+    const bytes = progressionToMidi(chords, { extensions, baseOctave })
     downloadMidi(bytes, 'hitme-progression')
+  }
+
+  async function handleExportVideo() {
+    if (videoBusy) return
+    setVideoBusy(true)
+    try {
+      const blob = await exportProgressionVideo(chords, {
+        extensions,
+        bpm: state.bpm,
+        envelope: state.envelope,
+        baseOctave,
+      })
+      setVideoBlob(blob)
+    } catch (err) {
+      // Rare (unsupported browser / no chords) — tell the user plainly.
+      window.alert(err instanceof Error ? err.message : 'Video export failed.')
+    } finally {
+      setVideoBusy(false)
+    }
   }
 
   function handleCycleVoicing(index: number) {
@@ -99,6 +127,7 @@ export function EditorScreen() {
       {
         extensions: effectiveExtensions(state, index),
         envelope: state.envelope,
+        baseOctave,
       },
     )
   }
@@ -127,6 +156,8 @@ export function EditorScreen() {
         ref={root}
         className={`${styles.screen} ${results ? styles.results : styles.input}`}
       >
+        <BetaBanner />
+
         <header className={styles.header}>
           <h1 className="sr-only">Hit me — chord progression editor</h1>
           <button
@@ -179,10 +210,18 @@ export function EditorScreen() {
           onPlay={handlePlayAll}
           onSave={() => setSaveOpen(true)}
           onExportMidi={handleExportMidi}
+          onExportVideo={handleExportVideo}
+          videoBusy={videoBusy}
         />
       </div>
 
       <LessonPanel lesson={lesson} onClose={() => setLesson(null)} />
+
+      <VideoModal
+        blob={videoBlob}
+        basename={progressionBasename(state.name)}
+        onClose={() => setVideoBlob(null)}
+      />
 
       <SaveDialog
         open={saveOpen}

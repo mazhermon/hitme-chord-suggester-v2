@@ -18,6 +18,9 @@ export interface VoiceOptions {
   baseOctave?: number
 }
 
+/** Default octave the base voicing is built on (middle register). */
+export const DEFAULT_BASE_OCTAVE = 4
+
 /** Voicing variants applied to an ascending MIDI note set. */
 export const VOICING_NAMES = [
   'Close',
@@ -61,7 +64,7 @@ export function chordToMidi(
   chord: VoiceableChord,
   options: VoiceOptions = {},
 ): number[] {
-  const { extensions, voicing = 0, baseOctave = 4 } = options
+  const { extensions, voicing = 0, baseOctave = DEFAULT_BASE_OCTAVE } = options
   const pitchClasses = extensions
     ? chordNotes(chord.root, chord.quality, extensions)
     : Chord.getChord(QUALITY_TONAL[chord.quality], chord.root).notes

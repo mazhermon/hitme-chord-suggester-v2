@@ -1,0 +1,28 @@
+.group {
+  border-top: 1px solid rgba(249, 249, 249, 0.16);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.caret {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  width: 1em;
+}
+
+.body {
+  padding: 0.25rem 0 1rem;
+}

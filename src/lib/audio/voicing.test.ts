@@ -40,6 +40,12 @@ describe('chordToMidi', () => {
       ),
     ).toHaveLength(6)
   })
+
+  it('shifts every note by 12 semitones per octave of baseOctave', () => {
+    const mid = chordToMidi({ root: 'C', quality: 'maj7' }, { baseOctave: 4 })
+    const up = chordToMidi({ root: 'C', quality: 'maj7' }, { baseOctave: 5 })
+    expect(up).toEqual(mid.map((n) => n + 12))
+  })
 })
 
 describe('chordToFrequencies with extension level', () => {

@@ -24,6 +24,8 @@ export interface ChordSlot {
 
 export interface EditorState {
   key: KeyContext
+  /** Name of the loaded song, or null while it's an unsaved progression. */
+  name: string | null
   slots: ChordSlot[]
   style: StyleId
   enabledStrategies: string[]
@@ -31,10 +33,14 @@ export interface EditorState {
   extensions: ExtensionFlags
   envelope: EnvelopeSettings
   bpm: number
+  /** Playback octave offset (whole octaves, clamped to ±2). */
+  octave: number
   muted: boolean
   showGuitar: boolean
   showPiano: boolean
 }
+
+const MAX_OCTAVE_SHIFT = 2
 
 function applyStyle(style: Style) {
   return {
@@ -48,8 +54,10 @@ function applyStyle(style: Style) {
 
 export const initialEditorState: EditorState = {
   key: { tonic: 'C', mode: 'major' },
+  name: null,
   slots: [],
   bpm: 90,
+  octave: 0,
   muted: false,
   showGuitar: false,
   showPiano: false,
@@ -75,12 +83,14 @@ export type EditorAction =
   | { type: 'cycleVoicing'; index: number }
   | { type: 'setEnvelope'; envelope: Partial<EnvelopeSettings> }
   | { type: 'setBpm'; bpm: number }
+  | { type: 'setOctave'; octave: number }
   | { type: 'toggleMute' }
   | { type: 'toggleGuitar' }
   | { type: 'togglePiano' }
   | {
       type: 'loadSong'
       song: {
+        name?: string
         key: KeyContext
         chords: Chord[]
         extensions?: ExtensionFlags
@@ -160,7 +170,7 @@ export function editorReducer(
       }
 
     case 'reset':
-      return { ...state, slots: [] }
+      return { ...state, slots: [], name: null }
 
     case 'suggest':
       return {
@@ -277,6 +287,15 @@ export function editorReducer(
     case 'setBpm':
       return { ...state, bpm: action.bpm }
 
+    case 'setOctave':
+      return {
+        ...state,
+        octave: Math.max(
+          -MAX_OCTAVE_SHIFT,
+          Math.min(MAX_OCTAVE_SHIFT, Math.round(action.octave)),
+        ),
+      }
+
     case 'toggleMute':
       return { ...state, muted: !state.muted }
 
@@ -290,6 +309,7 @@ export function editorReducer(
       return {
         ...state,
         key: action.song.key,
+        name: action.song.name ?? null,
         extensions: action.song.extensions ?? state.extensions,
         slots: action.song.chords.map((c, i) => ({
           base: c,

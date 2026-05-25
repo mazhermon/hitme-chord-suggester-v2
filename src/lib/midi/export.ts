@@ -9,6 +9,8 @@ export interface MidiOptions {
   beatsPerChord?: number
   /** Extension flags per chord (aligned to `chords`). */
   extensions?: ExtensionFlags[]
+  /** Octave the voicing is built on (default 4); shift to pitch up/down. */
+  baseOctave?: number
 }
 
 /** midi-writer-js duration code for a number of quarter-note beats. */
@@ -31,7 +33,7 @@ export function progressionToMidi(
   chords: Chord[],
   options: MidiOptions = {},
 ): Uint8Array {
-  const { beatsPerChord = 2, extensions } = options
+  const { beatsPerChord = 2, extensions, baseOctave } = options
   const track = new MidiWriter.Track()
   const duration = durationForBeats(beatsPerChord)
 
@@ -39,6 +41,7 @@ export function progressionToMidi(
     const pitches = chordToMidi(chord, {
       extensions: extensions?.[i],
       voicing: chord.voicing,
+      baseOctave,
     })
       .map((m) => Note.fromMidi(m))
       .filter((n): n is string => n !== null)
