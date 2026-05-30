@@ -45,6 +45,18 @@
   gap: 0.5rem;
 }
 
+/* Ghost buttons in the rest of the app have white text on the dark canvas;
+   on the cream dialog they vanish. Force dark text + a subtle hover. */
+.dialog .actions :global(.button._ghost) span,
+.dialog .actions button[class*='ghost'] span {
+  background: transparent;
+  color: var(--dark);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+.dialog .actions button[class*='ghost']:hover span {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .subtitle {
   margin: -0.25rem 0 0;
   color: var(--dark);
