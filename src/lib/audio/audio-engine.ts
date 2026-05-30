@@ -1,6 +1,7 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
-import { DEFAULT_ENVELOPE, type EnvelopeSettings } from './envelope'
+import { DEFAULT_ENVELOPE, type EnvelopeSettings, type Waveform } from './envelope'
 import type { ExtensionFlags } from '../theory/extensions'
+import { midiToFreq } from '../theory/notes'
 
 /**
  * Web Audio API synth: schedules oscillator + gain "voices" with an ADSR
@@ -9,14 +10,46 @@ import type { ExtensionFlags } from '../theory/extensions'
  */
 
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext }
+interface MobileNavigator {
+  audioSession?: { type: string }
+}
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
 let muted = false
+let foregroundResumeBound = false
 const MASTER_LEVEL = 0.8
 
 /** Seconds between notes when a chord is arpeggiated (shared with the piano UI). */
 export const ARPEGGIO_STEP = 0.16
+
+/**
+ * Make audio actually play on phones. iOS routes Web Audio through the "ambient"
+ * session by default, so the ring/silent switch mutes it; `audioSession = 'playback'`
+ * (iOS 16.4+) plays regardless. We also start a one-sample silent buffer, the
+ * long-standing trick to fully "unlock" the context on the first gesture.
+ * Exported for testing; safe + no-op where the APIs don't exist.
+ */
+export function primeAudioForMobile(
+  audio: AudioContext,
+  nav: MobileNavigator,
+): void {
+  if (nav.audioSession) {
+    try {
+      nav.audioSession.type = 'playback'
+    } catch {
+      /* read-only on this OS — ignore */
+    }
+  }
+  try {
+    const source = audio.createBufferSource()
+    source.buffer = audio.createBuffer(1, 1, 22050)
+    source.connect(audio.destination)
+    source.start(0)
+  } catch {
+    /* unlock kick unsupported — harmless */
+  }
+}
 
 /** Lazily create (and resume) the AudioContext. Call from a user gesture. */
 export function getAudioContext(): AudioContext | null {
@@ -29,6 +62,17 @@ export function getAudioContext(): AudioContext | null {
     masterGain = ctx.createGain()
     masterGain.gain.value = muted ? 0 : MASTER_LEVEL
     masterGain.connect(ctx.destination)
+    primeAudioForMobile(ctx, navigator as MobileNavigator)
+
+    // iOS suspends the context when the tab is backgrounded — wake it on return.
+    if (!foregroundResumeBound && typeof document !== 'undefined') {
+      foregroundResumeBound = true
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && ctx?.state === 'suspended') {
+          void ctx.resume()
+        }
+      })
+    }
   }
   if (ctx.state === 'suspended') void ctx.resume()
   return ctx
@@ -68,6 +112,11 @@ interface PlayOptions {
   arpeggio?: boolean
   /** Seconds between arpeggiated notes. */
   strum?: number
+  /**
+   * Where the voice's output should land. Defaults to the master gain node;
+   * playProgression overrides this so it can group-disconnect on stop().
+   */
+  output?: AudioNode
 }
 
 function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
@@ -81,7 +130,7 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   const sustainLevel = Math.max(0.0001, peak * env.sustain)
 
   const voice = audio.createGain()
-  voice.connect(masterGain)
+  voice.connect(options.output ?? masterGain)
   // ADSR
   voice.gain.setValueAtTime(0.0001, start)
   voice.gain.linearRampToValueAtTime(peak, start + env.attack)
@@ -97,13 +146,37 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   voice.gain.linearRampToValueAtTime(0.0001, releaseStart + env.release)
   const stopAt = releaseStart + env.release + 0.05
 
+  // Each frequency gets one oscillator per enabled waveform, all summed into
+  // the same voice gain. Per-voice gain was already scaled before we got here
+  // (see `peak` above); we additionally divide the per-oscillator output by
+  // waveformCount so layered waveforms don't 4× the amplitude and clip. Track
+  // when the last oscillator ends so we can disconnect the voice GainNode —
+  // without this every chord leaks a node into masterGain forever.
+  const waveforms: Waveform[] =
+    env.waveforms.length > 0 ? env.waveforms : ['triangle']
+  const waveformCount = waveforms.length
+  const perOscGain = waveformCount === 1 ? null : audio.createGain()
+  if (perOscGain) {
+    perOscGain.gain.value = 1 / waveformCount
+    perOscGain.connect(voice)
+  }
+  const sink = perOscGain ?? voice
+  let remaining = freqs.length * waveformCount
   for (const frequency of freqs) {
-    const osc = audio.createOscillator()
-    osc.type = env.waveform
-    osc.frequency.value = frequency
-    osc.connect(voice)
-    osc.start(start)
-    osc.stop(stopAt)
+    for (const wf of waveforms) {
+      const osc = audio.createOscillator()
+      osc.type = wf
+      osc.frequency.value = frequency
+      osc.connect(sink)
+      osc.start(start)
+      osc.stop(stopAt)
+      osc.onended = () => {
+        if (--remaining === 0) {
+          if (perOscGain) perOscGain.disconnect()
+          voice.disconnect()
+        }
+      }
+    }
   }
 }
 
@@ -133,6 +206,23 @@ export function playChord(
   playFrequencies(freqs, options)
 }
 
+/**
+ * Play a single note (used to preview a chord's root the moment the user
+ * taps a numeral in the dock — so they hear what they're inputting even
+ * before the chord is rendered). Short, quiet, blocky.
+ */
+export function playNote(
+  midi: number,
+  options: PlayOptions = {},
+): void {
+  const freq = midiToFreq(midi)
+  playFrequencies([freq], {
+    duration: 0.5,
+    gain: 0.18,
+    ...options,
+  })
+}
+
 export interface ProgressionOptions {
   bpm?: number
   beatsPerChord?: number
@@ -143,17 +233,35 @@ export interface ProgressionOptions {
   baseOctave?: number
 }
 
+/** Handle to an in-flight progression. `duration` is the total schedule length. */
+export interface PlaybackHandle {
+  duration: number
+  /** Cut audio immediately (50 ms fade to avoid a click). */
+  stop(): void
+}
+
 /**
- * Sequence a progression at a tempo. Returns the total duration in seconds so
- * the UI can show play progress.
+ * Sequence a progression at a tempo. Returns a handle the UI can use to stop
+ * playback mid-way. All voices route through a session gain we own, so stop()
+ * is a single disconnect that takes everything down at once.
  */
 export function playProgression(
   chords: PlayableChord[],
   options: ProgressionOptions = {},
-): number {
+): PlaybackHandle {
+  const audio = getAudioContext()
   const { bpm = 90, beatsPerChord = 2, extensions, envelope, baseOctave } =
     options
   const secondsPerChord = (60 / bpm) * beatsPerChord
+  const duration = chords.length * secondsPerChord
+
+  if (!audio || !masterGain || chords.length === 0) {
+    return { duration, stop: () => {} }
+  }
+
+  const session = audio.createGain()
+  session.connect(masterGain)
+
   chords.forEach((chord, i) => {
     playChord(chord, {
       extensions: extensions?.[i],
@@ -161,7 +269,32 @@ export function playProgression(
       baseOctave,
       when: i * secondsPerChord,
       duration: secondsPerChord * 0.95,
+      output: session,
     })
   })
-  return chords.length * secondsPerChord
+
+  let stopped = false
+  return {
+    duration,
+    stop() {
+      if (stopped || !audio) return
+      stopped = true
+      const now = audio.currentTime
+      // Quick fade so the cut doesn't click; then disconnect the whole session.
+      try {
+        session.gain.cancelScheduledValues(now)
+        session.gain.setValueAtTime(session.gain.value, now)
+        session.gain.linearRampToValueAtTime(0.0001, now + 0.05)
+      } catch {
+        /* node already gone — fine */
+      }
+      setTimeout(() => {
+        try {
+          session.disconnect()
+        } catch {
+          /* already disconnected */
+        }
+      }, 80)
+    },
+  }
 }

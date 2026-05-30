@@ -26,6 +26,8 @@
   transform: translateX(-105%);
   transition: transform 0.3s var(--ease-out);
   overflow-y: auto;
+  /* Reserve the scrollbar gutter so opening a section doesn't shift content. */
+  scrollbar-gutter: stable;
   visibility: hidden;
   z-index: 21;
 }
@@ -105,6 +107,8 @@
   font-size: 1.05rem;
   text-transform: none;
   letter-spacing: 0;
+  /* Digit widths stable so 90 bpm → 100 bpm doesn't jiggle the head. */
+  font-variant-numeric: tabular-nums;
 }
 
 .toggle {
@@ -124,6 +128,7 @@
 .toggleOn {
   background: var(--white) !important;
   color: var(--dark) !important;
+  /* Don't change font-weight on select — it would re-measure the flex row. */
 }
 
 .tonics {
@@ -143,7 +148,6 @@
 .tonicOn {
   background: var(--white) !important;
   color: var(--dark) !important;
-  font-weight: 600;
 }
 
 .strategies {
@@ -188,18 +192,20 @@
 .genreOn {
   background: var(--white) !important;
   color: var(--dark) !important;
-  font-weight: 600;
 }
 .note {
   margin: 0.5rem 0 0;
   font-size: 0.75rem;
   font-style: italic;
   opacity: 0.82;
+  /* Reserve enough vertical space for the longest description so swapping
+     genres doesn't shift everything below. */
+  min-height: 3.2em;
 }
 
-/* Extensions + waveform pill rows */
-.exts,
-.waves {
+/* Extensions row stays flex (checkboxes); waveform is a fixed grid so the
+   selected pill never reflows its siblings. */
+.exts {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 0.75rem;
@@ -210,8 +216,12 @@
   gap: 0.4rem;
   cursor: pointer;
 }
+.waves {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
 .waves button {
-  flex: 1 1 auto;
   padding: 0.3rem 0.4rem;
   border: 1px solid rgba(249, 249, 249, 0.3);
   border-radius: 8px;

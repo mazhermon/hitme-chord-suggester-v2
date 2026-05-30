@@ -312,34 +312,19 @@ export function exportProgressionVideo(
   })
 }
 
-const BRAND = 'hitme-progression'
-
-/**
- * Base filename for an export: the brand plus the song name (slugified), or
- * `-untitled` when the progression hasn't been saved.
- * e.g. `hitme-progression-untitled`, `hitme-progression-my-cool-song`.
- */
-export function progressionBasename(songName?: string | null): string {
-  const slug = (songName ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return slug ? `${BRAND}-${slug}` : `${BRAND}-untitled`
-}
-
-/** A sensible download filename for a video Blob, e.g. `hitme-progression.mp4`. */
-export function videoFilename(blob: Blob, basename = BRAND): string {
-  const ext = blob.type.includes('mp4') ? 'mp4' : 'webm'
-  return `${basename}.${ext}`
-}
-
-/** Wrap a Blob in a named File so the share sheet / download keep the name. */
-export function videoFile(blob: Blob, basename = 'hitme-progression'): File {
-  return new File([blob], videoFilename(blob, basename), { type: blob.type })
-}
+// String helpers (BRAND, progressionBasename, videoFilename, videoFile) live
+// in naming.ts so callers can import them without pulling in MediaRecorder +
+// canvas code. Re-export here so existing call sites keep working.
+export {
+  BRAND,
+  progressionBasename,
+  videoFilename,
+  videoFile,
+} from './naming'
+import { BRAND, videoFilename } from './naming'
 
 /** Trigger a browser download of an exported video Blob. */
-export function downloadVideo(blob: Blob, basename = 'hitme-progression'): void {
+export function downloadVideo(blob: Blob, basename = BRAND): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

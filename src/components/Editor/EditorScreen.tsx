@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import type { Chord } from '@/lib/theory/types'
@@ -12,15 +13,29 @@ import {
   allExtensions,
   effectiveExtensions,
 } from '@/state/editor'
-import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
+import {
+  playChord,
+  playProgression,
+  setMuted,
+  type PlaybackHandle,
+} from '@/lib/audio/audio-engine'
 import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
 import { getStorage } from '@/lib/storage'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
-import { exportProgressionVideo, progressionBasename } from '@/lib/video/record'
+// progressionBasename is split out of record.ts so importing it doesn't drag
+// in MediaRecorder + canvas code. The real exporter is lazy-loaded below.
+import { progressionBasename } from '@/lib/video/naming'
 import { lessonForSource, type Lesson } from '@/lib/theory/lessons'
 import { BetaBanner } from '@/components/BetaBanner/BetaBanner'
-import { VideoModal } from '@/components/VideoModal/VideoModal'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
+
+// VideoModal is only rendered after a successful export. Lazy-load it so the
+// initial bundle doesn't ship the modal + its video preview code for users
+// who never tap Video.
+const VideoModal = dynamic(
+  () => import('@/components/VideoModal/VideoModal').then((m) => m.VideoModal),
+  { ssr: false },
+)
 import { ChordDock } from '@/components/ChordDock/ChordDock'
 import { KeyDrawer } from '@/components/KeyDrawer/KeyDrawer'
 import { LessonPanel } from '@/components/LessonPanel/LessonPanel'
@@ -35,6 +50,12 @@ export function EditorScreen() {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  // Track the in-flight progression so the Stop button can cut it. Refs (not
+  // state) because the handle isn't part of render — we just need to reach
+  // for it from event handlers.
+  const playbackHandle = useRef<PlaybackHandle | null>(null)
+  const playbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const root = useRef<HTMLDivElement>(null)
 
   const chords = displayChords(state)
@@ -84,13 +105,45 @@ export function EditorScreen() {
   }
 
   function handlePlayAll(toPlay: Chord[]) {
-    playProgression(toPlay, {
+    // If something's already playing, treat a second Play as restart.
+    stopPlayback()
+    const handle = playProgression(toPlay, {
       bpm: state.bpm,
       extensions,
       envelope: state.envelope,
       baseOctave,
     })
+    playbackHandle.current = handle
+    setIsPlaying(true)
+    // Auto-flip the button back to Play after the progression finishes
+    // naturally. +200 ms covers the envelope release tail.
+    playbackTimeout.current = setTimeout(
+      () => {
+        playbackHandle.current = null
+        playbackTimeout.current = null
+        setIsPlaying(false)
+      },
+      handle.duration * 1000 + 200,
+    )
   }
+
+  function stopPlayback() {
+    playbackHandle.current?.stop()
+    playbackHandle.current = null
+    if (playbackTimeout.current) {
+      clearTimeout(playbackTimeout.current)
+      playbackTimeout.current = null
+    }
+    setIsPlaying(false)
+  }
+
+  // Make sure we don't leave a dangling timeout when the editor unmounts.
+  useEffect(() => {
+    return () => {
+      playbackHandle.current?.stop()
+      if (playbackTimeout.current) clearTimeout(playbackTimeout.current)
+    }
+  }, [])
 
   function handleExportMidi() {
     // No tempo written — notes are in musical beats, so they land correctly at
@@ -103,6 +156,9 @@ export function EditorScreen() {
     if (videoBusy) return
     setVideoBusy(true)
     try {
+      // Lazy-load the MediaRecorder + canvas exporter on first click; users
+      // who never use Video don't pay its bundle cost.
+      const { exportProgressionVideo } = await import('@/lib/video/record')
       const blob = await exportProgressionVideo(chords, {
         extensions,
         bpm: state.bpm,
@@ -133,6 +189,10 @@ export function EditorScreen() {
   }
 
   async function handleSave(name: string) {
+    // id === name in our model, so "save to existing" and "save as new"
+    // both reduce to a save({id: name, ...}) call here — the overwrite
+    // flag from the dialog becomes meaningful only when we move to
+    // separate uuid ids (see NEXT-STEPS.md).
     const song = {
       id: name,
       name,
@@ -141,6 +201,12 @@ export function EditorScreen() {
       extensions: state.extensions,
       chordExtensions: extensions,
       locked: state.slots.map((s) => s.locked),
+      // Audio shaping travels with the song so playback sounds the same
+      // wherever it's reopened (editor or detail page) — see ADR-007.
+      envelope: state.envelope,
+      bpm: state.bpm,
+      octave: state.octave,
+      style: state.style,
       createdAt: Date.now(),
     }
     await getStorage().save(song)
@@ -208,6 +274,8 @@ export function EditorScreen() {
 
         <ChordDock
           onPlay={handlePlayAll}
+          onStop={stopPlayback}
+          isPlaying={isPlaying}
           onSave={() => setSaveOpen(true)}
           onExportMidi={handleExportMidi}
           onExportVideo={handleExportVideo}
@@ -225,6 +293,8 @@ export function EditorScreen() {
 
       <SaveDialog
         open={saveOpen}
+        existingName={state.name ?? undefined}
+        defaultName={state.name ?? ''}
         onCancel={() => setSaveOpen(false)}
         onSave={handleSave}
       />

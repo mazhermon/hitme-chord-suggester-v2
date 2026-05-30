@@ -43,9 +43,14 @@ Next.js 16 · React 19 · TypeScript (strict) · CSS Modules · `tonal` · `midi
 Web Audio API · Firebase (Firestore, optional) · Vitest · Playwright.
 
 The music-theory and audio logic live in pure, unit-tested modules under `src/lib/`; React is
-a thin layer on top. **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** is the as-built
-reference (module map, data model, key decisions, and gotchas); `docs/superpowers/specs` and
-`docs/superpowers/plans` hold the original point-in-time design snapshots.
+a thin layer on top.
+
+- **[`docs/SYSTEM.md`](docs/SYSTEM.md)** — visual architecture (C4-shaped Mermaid diagrams,
+  service boundaries, ADRs for the load-bearing technical decisions). Start here.
+- **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** — as-built text reference (module map,
+  data model, gotchas).
+- `docs/superpowers/specs` and `docs/superpowers/plans` — point-in-time design snapshots.
+- `docs/roadmap/` — where the system is headed (auth, deploy, social share, etc.).
 
 ## Develop
 

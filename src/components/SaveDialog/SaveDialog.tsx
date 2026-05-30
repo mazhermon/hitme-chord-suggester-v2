@@ -6,26 +6,57 @@ import styles from './SaveDialog.module.css'
 
 interface SaveDialogProps {
   open: boolean
+  /**
+   * If set, the dialog opens to a two-choice screen: save *to this name* (i.e.
+   * overwrite the existing song) or save as new (prompts for a fresh name).
+   * If absent, it opens straight to the name-input form.
+   */
+  existingName?: string
+  /** Pre-fill the name input. */
   defaultName?: string
   onCancel: () => void
-  onSave: (name: string) => void
+  /**
+   * Called with the chosen name and a flag for whether this is meant to
+   * overwrite the existing song (true = save to existing name; false = new).
+   */
+  onSave: (name: string, overwrite: boolean) => void
 }
 
 export function SaveDialog({
   open,
+  existingName,
   defaultName = '',
   onCancel,
   onSave,
 }: SaveDialogProps) {
+  // Two internal modes when there's an existingName: 'choose' (overwrite vs new)
+  // and 'input' (enter a new name). With no existingName we start in 'input'.
+  const [mode, setMode] = useState<'choose' | 'input'>(
+    existingName ? 'choose' : 'input',
+  )
   const [name, setName] = useState(defaultName)
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLFormElement>(null)
+  const firstButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Escape to close, focus the input on open, trap Tab, restore focus on close.
+  // When the dialog re-opens, reset mode + name based on the latest props.
+  // setTimeout(0) keeps the React Compiler lint happy (no sync setState in
+  // effect bodies) without delaying the user-visible reset noticeably.
+  useEffect(() => {
+    if (!open) return
+    const id = setTimeout(() => {
+      setMode(existingName ? 'choose' : 'input')
+      setName(defaultName)
+    }, 0)
+    return () => clearTimeout(id)
+  }, [open, existingName, defaultName])
+
+  // Escape to close, autofocus, trap Tab, restore focus on close.
   useEffect(() => {
     if (!open) return
     const previouslyFocused = document.activeElement as HTMLElement | null
-    inputRef.current?.focus()
+    if (mode === 'input') inputRef.current?.focus()
+    else firstButtonRef.current?.focus()
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -52,14 +83,14 @@ export function SaveDialog({
       document.removeEventListener('keydown', onKeyDown)
       previouslyFocused?.focus?.()
     }
-  }, [open, onCancel])
+  }, [open, mode, onCancel])
 
   if (!open) return null
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (trimmed) onSave(trimmed)
+    if (trimmed) onSave(trimmed, false)
   }
 
   return (
@@ -73,25 +104,69 @@ export function SaveDialog({
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h2 id="save-dialog-title" className={styles.title}>
-          Choose a song name
-        </h2>
-        <input
-          ref={inputRef}
-          className={styles.input}
-          value={name}
-          placeholder="Song name"
-          aria-label="Song name"
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className={styles.actions}>
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={!name.trim()}>
-            Save
-          </Button>
-        </div>
+        {mode === 'choose' && existingName ? (
+          <>
+            <h2 id="save-dialog-title" className={styles.title}>
+              Save changes
+            </h2>
+            <p className={styles.subtitle}>
+              You&apos;re editing <strong>{existingName}</strong>.
+            </p>
+            <div className={styles.choices}>
+              <Button
+                ref={firstButtonRef}
+                type="button"
+                variant="primary"
+                onClick={() => onSave(existingName, true)}
+              >
+                Save to &ldquo;{existingName}&rdquo;
+              </Button>
+              <Button
+                type="button"
+                variant="pill"
+                onClick={() => setMode('input')}
+              >
+                Save as new&hellip;
+              </Button>
+            </div>
+            <div className={styles.actions}>
+              <Button type="button" variant="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="save-dialog-title" className={styles.title}>
+              {existingName ? 'Save as new song' : 'Choose a song name'}
+            </h2>
+            <input
+              ref={inputRef}
+              className={styles.input}
+              value={name}
+              placeholder="Song name"
+              aria-label="Song name"
+              onChange={(e) => setName(e.target.value)}
+            />
+            <div className={styles.actions}>
+              {existingName && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setMode('choose')}
+                >
+                  ← Back
+                </Button>
+              )}
+              <Button type="button" variant="ghost" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={!name.trim()}>
+                Save
+              </Button>
+            </div>
+          </>
+        )}
       </form>
     </div>
   )

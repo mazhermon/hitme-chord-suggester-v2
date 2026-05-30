@@ -204,7 +204,7 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <span>Envelope</span>
-              <strong>{env.waveform}</strong>
+              <strong>{summariseWaveforms(env.waveforms)}</strong>
             </div>
             <EnvSlider
               label="Attack"
@@ -246,19 +246,33 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
                 dispatch({ type: 'setEnvelope', envelope: { release } })
               }
             />
-            <div className={styles.waves} role="group" aria-label="Waveform">
-              {WAVEFORMS.map((w) => (
-                <button
-                  key={w}
-                  className={w === env.waveform ? styles.tonicOn : ''}
-                  aria-pressed={w === env.waveform}
-                  onClick={() =>
-                    dispatch({ type: 'setEnvelope', envelope: { waveform: w } })
-                  }
-                >
-                  {w}
-                </button>
-              ))}
+            <div className={styles.waves} role="group" aria-label="Waveforms">
+              {WAVEFORMS.map((w) => {
+                const on = env.waveforms.includes(w)
+                // Disable deselect when this is the only one on — we always
+                // need at least one waveform to actually make sound.
+                const onlyOne = on && env.waveforms.length === 1
+                return (
+                  <button
+                    key={w}
+                    className={on ? styles.tonicOn : ''}
+                    aria-pressed={on}
+                    aria-label={`${w} waveform`}
+                    disabled={onlyOne}
+                    title={
+                      onlyOne ? 'At least one waveform must stay on' : undefined
+                    }
+                    onClick={() =>
+                      dispatch({
+                        type: 'setEnvelope',
+                        envelope: { waveforms: toggleWaveform(env.waveforms, w) },
+                      })
+                    }
+                  >
+                    {w}
+                  </button>
+                )
+              })}
             </div>
           </section>
 
@@ -332,6 +346,26 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
       </aside>
     </>
   )
+}
+
+/**
+ * One-line summary for the section-head: "sine" (1), "sine + triangle" (2),
+ * "3 waves" (3+). Tabular-nums in the CSS keeps any digit-changes stable.
+ */
+function summariseWaveforms(waveforms: Waveform[]): string {
+  if (waveforms.length <= 1) return waveforms[0] ?? ''
+  if (waveforms.length === 2) return `${waveforms[0]} + ${waveforms[1]}`
+  return `${waveforms.length} waves`
+}
+
+/** Add or remove `w` from the list; refuse to leave the list empty. */
+function toggleWaveform(current: Waveform[], w: Waveform): Waveform[] {
+  if (current.includes(w)) {
+    const next = current.filter((x) => x !== w)
+    return next.length > 0 ? next : current
+  }
+  // Keep a stable, predictable order (the canonical WAVEFORMS order).
+  return WAVEFORMS.filter((x) => x === w || current.includes(x))
 }
 
 interface EnvSliderProps {

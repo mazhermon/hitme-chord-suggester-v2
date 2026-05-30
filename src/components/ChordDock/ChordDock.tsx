@@ -2,13 +2,21 @@
 
 import type { Chord } from '@/lib/theory/types'
 import { ROMAN_NUMERALS } from '@/lib/theory/nashville'
+import { realizeChord } from '@/lib/theory/chords'
 import { useEditor } from '@/state/EditorProvider'
 import { displayChords } from '@/state/editor'
+import { playNote } from '@/lib/audio/audio-engine'
+import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
+import { Note } from 'tonal'
 import { Button } from '@/components/Button/Button'
 import styles from './ChordDock.module.css'
 
 interface ChordDockProps {
   onPlay: (chords: Chord[]) => void
+  /** Cut the in-flight progression immediately. */
+  onStop?: () => void
+  /** When true, the Play button shows Stop. */
+  isPlaying?: boolean
   onSave: () => void
   onExportMidi?: () => void
   onExportVideo?: () => void
@@ -18,6 +26,8 @@ interface ChordDockProps {
 
 export function ChordDock({
   onPlay,
+  onStop,
+  isPlaying = false,
   onSave,
   onExportMidi,
   onExportVideo,
@@ -35,7 +45,18 @@ export function ChordDock({
             <Button
               variant="ghost"
               aria-label={`Add chord ${roman}`}
-              onClick={() => dispatch({ type: 'addChord', degree })}
+              onClick={() => {
+                dispatch({ type: 'addChord', degree })
+                // Preview the root note so the user hears what they're
+                // inputting before the chord renders. Use the same base
+                // octave as the synth so it sits in context.
+                const chord = realizeChord(degree, state.key)
+                const baseOctave = DEFAULT_BASE_OCTAVE + state.octave
+                const midi = Note.midi(`${chord.root}${baseOctave}`)
+                if (midi !== null) {
+                  playNote(midi, { envelope: state.envelope })
+                }
+              }}
             >
               {roman}
             </Button>
@@ -50,8 +71,12 @@ export function ChordDock({
         >
           Suggest
         </Button>
-        <Button onClick={() => onPlay(chords)} disabled={!hasChords}>
-          Play
+        <Button
+          onClick={() => (isPlaying ? onStop?.() : onPlay(chords))}
+          disabled={!hasChords && !isPlaying}
+          aria-label={isPlaying ? 'Stop playback' : 'Play progression'}
+        >
+          {isPlaying ? 'Stop' : 'Play'}
         </Button>
         <Button
           onClick={() => dispatch({ type: 'reset' })}

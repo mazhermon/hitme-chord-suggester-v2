@@ -1,7 +1,7 @@
 /** Oscillator waveform options. */
 export type Waveform = 'sine' | 'triangle' | 'sawtooth' | 'square'
 
-/** ADSR envelope + waveform that shapes each played note. */
+/** ADSR envelope + waveforms that shape each played note. */
 export interface EnvelopeSettings {
   /** Seconds from silence to peak. */
   attack: number
@@ -11,7 +11,14 @@ export interface EnvelopeSettings {
   sustain: number
   /** Seconds to fade to silence after the note ends. */
   release: number
-  waveform: Waveform
+  /**
+   * Waveforms to layer for each note. One = the classic single oscillator;
+   * multiple = each note sums one oscillator per waveform into the same voice
+   * gain, with per-voice gain divided by `waveforms.length` to compensate for
+   * the additive amplitude (so 4 waveforms aren't 4× the loudness + clipping).
+   * Always has at least one entry.
+   */
+  waveforms: Waveform[]
 }
 
 export const DEFAULT_ENVELOPE: EnvelopeSettings = {
@@ -19,5 +26,5 @@ export const DEFAULT_ENVELOPE: EnvelopeSettings = {
   decay: 0.12,
   sustain: 0.7,
   release: 0.3,
-  waveform: 'triangle',
+  waveforms: ['triangle'],
 }

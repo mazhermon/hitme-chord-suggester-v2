@@ -96,6 +96,10 @@ export type EditorAction =
         extensions?: ExtensionFlags
         chordExtensions?: ExtensionFlags[]
         locked?: boolean[]
+        envelope?: EnvelopeSettings
+        bpm?: number
+        octave?: number
+        style?: StyleId
       }
     }
 
@@ -305,19 +309,33 @@ export function editorReducer(
     case 'togglePiano':
       return { ...state, showPiano: !state.showPiano }
 
-    case 'loadSong':
+    case 'loadSong': {
+      const s = action.song
+      // Apply the saved style first (it sets defaults for envelope/strategies/
+      // extensions); then explicitly override with any settings the user
+      // customized on top of that style at save time. Without a saved style
+      // we keep the editor's current style untouched and only override the
+      // fields that were saved explicitly.
+      const stylePatch: Partial<ReturnType<typeof applyStyle>> = s.style
+        ? applyStyle(STYLES[s.style])
+        : {}
       return {
         ...state,
-        key: action.song.key,
-        name: action.song.name ?? null,
-        extensions: action.song.extensions ?? state.extensions,
-        slots: action.song.chords.map((c, i) => ({
+        ...stylePatch,
+        key: s.key,
+        name: s.name ?? null,
+        extensions: s.extensions ?? stylePatch.extensions ?? state.extensions,
+        envelope: s.envelope ?? stylePatch.envelope ?? state.envelope,
+        bpm: s.bpm ?? state.bpm,
+        octave: typeof s.octave === 'number' ? s.octave : state.octave,
+        slots: s.chords.map((c, i) => ({
           base: c,
           sub: null,
-          locked: action.song.locked?.[i] ?? false,
-          extensions: action.song.chordExtensions?.[i],
+          locked: s.locked?.[i] ?? false,
+          extensions: s.chordExtensions?.[i],
         })),
       }
+    }
 
     default:
       return state

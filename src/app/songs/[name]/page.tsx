@@ -1,20 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
-import { playChord, playProgression } from '@/lib/audio/audio-engine'
-import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
 import {
-  exportProgressionVideo,
-  progressionBasename,
-} from '@/lib/video/record'
+  playChord,
+  playProgression,
+  type PlaybackHandle,
+} from '@/lib/audio/audio-engine'
+import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
+import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
+// progressionBasename is split out of record.ts so the page can import it
+// without pulling in MediaRecorder + canvas code. The real exporter is
+// lazy-loaded inside handleExportVideo.
+import { progressionBasename } from '@/lib/video/naming'
 import { flagsFromLevel, type ExtensionFlags } from '@/lib/theory/extensions'
 import { Button } from '@/components/Button/Button'
-import { VideoModal } from '@/components/VideoModal/VideoModal'
 import styles from '../songs.module.css'
+
+// VideoModal only renders after a successful export — lazy-load it.
+const VideoModal = dynamic(
+  () => import('@/components/VideoModal/VideoModal').then((m) => m.VideoModal),
+  { ssr: false },
+)
 
 /** Per-chord extension flags for a saved song (with sensible fallbacks). */
 function songExtensions(song: Song): ExtensionFlags[] {
@@ -30,6 +41,52 @@ export default function SongPage() {
   const [song, setSong] = useState<Song | null | undefined>(undefined)
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const playbackHandle = useRef<PlaybackHandle | null>(null)
+  const playbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function stopPlayback() {
+    playbackHandle.current?.stop()
+    playbackHandle.current = null
+    if (playbackTimeout.current) {
+      clearTimeout(playbackTimeout.current)
+      playbackTimeout.current = null
+    }
+    setIsPlaying(false)
+  }
+  function playAll() {
+    if (!song) return
+    stopPlayback()
+    // Use the song's saved audio shaping so the detail page sounds the same
+    // as the editor did when the song was saved. Falls back to engine
+    // defaults for songs saved before envelope/bpm/octave were persisted.
+    const baseOctave =
+      typeof song.octave === 'number'
+        ? DEFAULT_BASE_OCTAVE + song.octave
+        : undefined
+    const handle = playProgression(song.chords, {
+      extensions: songExtensions(song),
+      envelope: song.envelope,
+      bpm: song.bpm,
+      baseOctave,
+    })
+    playbackHandle.current = handle
+    setIsPlaying(true)
+    playbackTimeout.current = setTimeout(
+      () => {
+        playbackHandle.current = null
+        playbackTimeout.current = null
+        setIsPlaying(false)
+      },
+      handle.duration * 1000 + 200,
+    )
+  }
+  useEffect(() => {
+    return () => {
+      playbackHandle.current?.stop()
+      if (playbackTimeout.current) clearTimeout(playbackTimeout.current)
+    }
+  }, [])
 
   useEffect(() => {
     getStorage().get(name).then(setSong)
@@ -53,6 +110,7 @@ export default function SongPage() {
     if (!song || videoBusy) return
     setVideoBusy(true)
     try {
+      const { exportProgressionVideo } = await import('@/lib/video/record')
       const blob = await exportProgressionVideo(song.chords, {
         extensions: songExtensions(song),
       })
@@ -88,6 +146,11 @@ export default function SongPage() {
               onPlay={(chord, index) =>
                 playChord(chord, {
                   extensions: songExtensions(song)[index],
+                  envelope: song.envelope,
+                  baseOctave:
+                    typeof song.octave === 'number'
+                      ? DEFAULT_BASE_OCTAVE + song.octave
+                      : undefined,
                   arpeggio: true,
                 })
               }
@@ -95,13 +158,10 @@ export default function SongPage() {
           </div>
           <div className={styles.songActions}>
             <Button
-              onClick={() =>
-                playProgression(song.chords, {
-                  extensions: songExtensions(song),
-                })
-              }
+              onClick={() => (isPlaying ? stopPlayback() : playAll())}
+              aria-label={isPlaying ? 'Stop playback' : 'Play progression'}
             >
-              Play
+              {isPlaying ? 'Stop' : 'Play'}
             </Button>
             <Button variant="ghost" onClick={handleExportMidi}>
               MIDI

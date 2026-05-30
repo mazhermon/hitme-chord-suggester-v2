@@ -53,6 +53,14 @@
   opacity: 0.7;
 }
 
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.action,
 .delete {
   border: 0;
   background: transparent;
@@ -60,10 +68,72 @@
   opacity: 0.6;
   cursor: pointer;
   font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
 }
+.action:hover,
 .delete:hover {
   opacity: 1;
   text-decoration: underline;
+}
+.action:focus-visible,
+.delete:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.renameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.renameInput {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(249, 249, 249, 0.4);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--white);
+  font: inherit;
+}
+.renameInput:focus-visible {
+  outline: none;
+  border-color: var(--white);
+}
+
+.joinRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.joinLabel {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.joinSelect {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(249, 249, 249, 0.4);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.joinSelect:focus-visible {
+  outline: none;
+  border-color: var(--white);
+}
+.joinSelect option {
+  background: var(--panel);
+  color: var(--white);
 }
 
 .songCanvas {
