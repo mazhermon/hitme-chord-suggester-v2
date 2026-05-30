@@ -9,14 +9,46 @@ import type { ExtensionFlags } from '../theory/extensions'
  */
 
 type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext }
+interface MobileNavigator {
+  audioSession?: { type: string }
+}
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
 let muted = false
+let foregroundResumeBound = false
 const MASTER_LEVEL = 0.8
 
 /** Seconds between notes when a chord is arpeggiated (shared with the piano UI). */
 export const ARPEGGIO_STEP = 0.16
+
+/**
+ * Make audio actually play on phones. iOS routes Web Audio through the "ambient"
+ * session by default, so the ring/silent switch mutes it; `audioSession = 'playback'`
+ * (iOS 16.4+) plays regardless. We also start a one-sample silent buffer, the
+ * long-standing trick to fully "unlock" the context on the first gesture.
+ * Exported for testing; safe + no-op where the APIs don't exist.
+ */
+export function primeAudioForMobile(
+  audio: AudioContext,
+  nav: MobileNavigator,
+): void {
+  if (nav.audioSession) {
+    try {
+      nav.audioSession.type = 'playback'
+    } catch {
+      /* read-only on this OS — ignore */
+    }
+  }
+  try {
+    const source = audio.createBufferSource()
+    source.buffer = audio.createBuffer(1, 1, 22050)
+    source.connect(audio.destination)
+    source.start(0)
+  } catch {
+    /* unlock kick unsupported — harmless */
+  }
+}
 
 /** Lazily create (and resume) the AudioContext. Call from a user gesture. */
 export function getAudioContext(): AudioContext | null {
@@ -29,6 +61,17 @@ export function getAudioContext(): AudioContext | null {
     masterGain = ctx.createGain()
     masterGain.gain.value = muted ? 0 : MASTER_LEVEL
     masterGain.connect(ctx.destination)
+    primeAudioForMobile(ctx, navigator as MobileNavigator)
+
+    // iOS suspends the context when the tab is backgrounded — wake it on return.
+    if (!foregroundResumeBound && typeof document !== 'undefined') {
+      foregroundResumeBound = true
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && ctx?.state === 'suspended') {
+          void ctx.resume()
+        }
+      })
+    }
   }
   if (ctx.state === 'suspended') void ctx.resume()
   return ctx
