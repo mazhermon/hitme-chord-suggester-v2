@@ -15,6 +15,8 @@ function setup(props?: Partial<Parameters<typeof ChordDock>[0]>) {
       <ChordDock
         onPlay={props?.onPlay ?? vi.fn()}
         onSave={props?.onSave ?? vi.fn()}
+        onStop={props?.onStop}
+        isPlaying={props?.isPlaying}
       />
       <Peek />
     </EditorProvider>,
@@ -48,9 +50,18 @@ describe('ChordDock', () => {
     const onPlay = vi.fn()
     setup({ onPlay })
     await userEvent.click(screen.getByRole('button', { name: 'Add chord I' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Play' }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Play progression' }),
+    )
     expect(onPlay).toHaveBeenCalledTimes(1)
     expect(onPlay.mock.calls[0][0]).toHaveLength(1)
+  })
+
+  it('calls onStop when Play is pressed while playing', async () => {
+    const onStop = vi.fn()
+    setup({ onStop, isPlaying: true })
+    await userEvent.click(screen.getByRole('button', { name: 'Stop playback' }))
+    expect(onStop).toHaveBeenCalledTimes(1)
   })
 
   it('calls onSave', async () => {

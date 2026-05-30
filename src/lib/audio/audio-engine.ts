@@ -112,6 +112,11 @@ interface PlayOptions {
   arpeggio?: boolean
   /** Seconds between arpeggiated notes. */
   strum?: number
+  /**
+   * Where the voice's output should land. Defaults to the master gain node;
+   * playProgression overrides this so it can group-disconnect on stop().
+   */
+  output?: AudioNode
 }
 
 function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
@@ -125,7 +130,7 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   const sustainLevel = Math.max(0.0001, peak * env.sustain)
 
   const voice = audio.createGain()
-  voice.connect(masterGain)
+  voice.connect(options.output ?? masterGain)
   // ADSR
   voice.gain.setValueAtTime(0.0001, start)
   voice.gain.linearRampToValueAtTime(peak, start + env.attack)
@@ -228,17 +233,35 @@ export interface ProgressionOptions {
   baseOctave?: number
 }
 
+/** Handle to an in-flight progression. `duration` is the total schedule length. */
+export interface PlaybackHandle {
+  duration: number
+  /** Cut audio immediately (50 ms fade to avoid a click). */
+  stop(): void
+}
+
 /**
- * Sequence a progression at a tempo. Returns the total duration in seconds so
- * the UI can show play progress.
+ * Sequence a progression at a tempo. Returns a handle the UI can use to stop
+ * playback mid-way. All voices route through a session gain we own, so stop()
+ * is a single disconnect that takes everything down at once.
  */
 export function playProgression(
   chords: PlayableChord[],
   options: ProgressionOptions = {},
-): number {
+): PlaybackHandle {
+  const audio = getAudioContext()
   const { bpm = 90, beatsPerChord = 2, extensions, envelope, baseOctave } =
     options
   const secondsPerChord = (60 / bpm) * beatsPerChord
+  const duration = chords.length * secondsPerChord
+
+  if (!audio || !masterGain || chords.length === 0) {
+    return { duration, stop: () => {} }
+  }
+
+  const session = audio.createGain()
+  session.connect(masterGain)
+
   chords.forEach((chord, i) => {
     playChord(chord, {
       extensions: extensions?.[i],
@@ -246,7 +269,32 @@ export function playProgression(
       baseOctave,
       when: i * secondsPerChord,
       duration: secondsPerChord * 0.95,
+      output: session,
     })
   })
-  return chords.length * secondsPerChord
+
+  let stopped = false
+  return {
+    duration,
+    stop() {
+      if (stopped || !audio) return
+      stopped = true
+      const now = audio.currentTime
+      // Quick fade so the cut doesn't click; then disconnect the whole session.
+      try {
+        session.gain.cancelScheduledValues(now)
+        session.gain.setValueAtTime(session.gain.value, now)
+        session.gain.linearRampToValueAtTime(0.0001, now + 0.05)
+      } catch {
+        /* node already gone — fine */
+      }
+      setTimeout(() => {
+        try {
+          session.disconnect()
+        } catch {
+          /* already disconnected */
+        }
+      }, 80)
+    },
+  }
 }

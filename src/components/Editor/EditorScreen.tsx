@@ -13,7 +13,12 @@ import {
   allExtensions,
   effectiveExtensions,
 } from '@/state/editor'
-import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
+import {
+  playChord,
+  playProgression,
+  setMuted,
+  type PlaybackHandle,
+} from '@/lib/audio/audio-engine'
 import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
 import { getStorage } from '@/lib/storage'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
@@ -45,6 +50,12 @@ export function EditorScreen() {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  // Track the in-flight progression so the Stop button can cut it. Refs (not
+  // state) because the handle isn't part of render — we just need to reach
+  // for it from event handlers.
+  const playbackHandle = useRef<PlaybackHandle | null>(null)
+  const playbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const root = useRef<HTMLDivElement>(null)
 
   const chords = displayChords(state)
@@ -94,13 +105,45 @@ export function EditorScreen() {
   }
 
   function handlePlayAll(toPlay: Chord[]) {
-    playProgression(toPlay, {
+    // If something's already playing, treat a second Play as restart.
+    stopPlayback()
+    const handle = playProgression(toPlay, {
       bpm: state.bpm,
       extensions,
       envelope: state.envelope,
       baseOctave,
     })
+    playbackHandle.current = handle
+    setIsPlaying(true)
+    // Auto-flip the button back to Play after the progression finishes
+    // naturally. +200 ms covers the envelope release tail.
+    playbackTimeout.current = setTimeout(
+      () => {
+        playbackHandle.current = null
+        playbackTimeout.current = null
+        setIsPlaying(false)
+      },
+      handle.duration * 1000 + 200,
+    )
   }
+
+  function stopPlayback() {
+    playbackHandle.current?.stop()
+    playbackHandle.current = null
+    if (playbackTimeout.current) {
+      clearTimeout(playbackTimeout.current)
+      playbackTimeout.current = null
+    }
+    setIsPlaying(false)
+  }
+
+  // Make sure we don't leave a dangling timeout when the editor unmounts.
+  useEffect(() => {
+    return () => {
+      playbackHandle.current?.stop()
+      if (playbackTimeout.current) clearTimeout(playbackTimeout.current)
+    }
+  }, [])
 
   function handleExportMidi() {
     // No tempo written — notes are in musical beats, so they land correctly at
@@ -221,6 +264,8 @@ export function EditorScreen() {
 
         <ChordDock
           onPlay={handlePlayAll}
+          onStop={stopPlayback}
+          isPlaying={isPlaying}
           onSave={() => setSaveOpen(true)}
           onExportMidi={handleExportMidi}
           onExportVideo={handleExportVideo}

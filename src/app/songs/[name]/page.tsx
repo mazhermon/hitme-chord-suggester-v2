@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
-import { playChord, playProgression } from '@/lib/audio/audio-engine'
+import {
+  playChord,
+  playProgression,
+  type PlaybackHandle,
+} from '@/lib/audio/audio-engine'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
 // progressionBasename is split out of record.ts so the page can import it
 // without pulling in MediaRecorder + canvas code. The real exporter is
@@ -36,6 +40,42 @@ export default function SongPage() {
   const [song, setSong] = useState<Song | null | undefined>(undefined)
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const playbackHandle = useRef<PlaybackHandle | null>(null)
+  const playbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function stopPlayback() {
+    playbackHandle.current?.stop()
+    playbackHandle.current = null
+    if (playbackTimeout.current) {
+      clearTimeout(playbackTimeout.current)
+      playbackTimeout.current = null
+    }
+    setIsPlaying(false)
+  }
+  function playAll() {
+    if (!song) return
+    stopPlayback()
+    const handle = playProgression(song.chords, {
+      extensions: songExtensions(song),
+    })
+    playbackHandle.current = handle
+    setIsPlaying(true)
+    playbackTimeout.current = setTimeout(
+      () => {
+        playbackHandle.current = null
+        playbackTimeout.current = null
+        setIsPlaying(false)
+      },
+      handle.duration * 1000 + 200,
+    )
+  }
+  useEffect(() => {
+    return () => {
+      playbackHandle.current?.stop()
+      if (playbackTimeout.current) clearTimeout(playbackTimeout.current)
+    }
+  }, [])
 
   useEffect(() => {
     getStorage().get(name).then(setSong)
@@ -102,13 +142,10 @@ export default function SongPage() {
           </div>
           <div className={styles.songActions}>
             <Button
-              onClick={() =>
-                playProgression(song.chords, {
-                  extensions: songExtensions(song),
-                })
-              }
+              onClick={() => (isPlaying ? stopPlayback() : playAll())}
+              aria-label={isPlaying ? 'Stop playback' : 'Play progression'}
             >
-              Play
+              {isPlaying ? 'Stop' : 'Play'}
             </Button>
             <Button variant="ghost" onClick={handleExportMidi}>
               MIDI

@@ -13,6 +13,10 @@ import styles from './ChordDock.module.css'
 
 interface ChordDockProps {
   onPlay: (chords: Chord[]) => void
+  /** Cut the in-flight progression immediately. */
+  onStop?: () => void
+  /** When true, the Play button shows Stop. */
+  isPlaying?: boolean
   onSave: () => void
   onExportMidi?: () => void
   onExportVideo?: () => void
@@ -22,6 +26,8 @@ interface ChordDockProps {
 
 export function ChordDock({
   onPlay,
+  onStop,
+  isPlaying = false,
   onSave,
   onExportMidi,
   onExportVideo,
@@ -65,8 +71,12 @@ export function ChordDock({
         >
           Suggest
         </Button>
-        <Button onClick={() => onPlay(chords)} disabled={!hasChords}>
-          Play
+        <Button
+          onClick={() => (isPlaying ? onStop?.() : onPlay(chords))}
+          disabled={!hasChords && !isPlaying}
+          aria-label={isPlaying ? 'Stop playback' : 'Play progression'}
+        >
+          {isPlaying ? 'Stop' : 'Play'}
         </Button>
         <Button
           onClick={() => dispatch({ type: 'reset' })}
