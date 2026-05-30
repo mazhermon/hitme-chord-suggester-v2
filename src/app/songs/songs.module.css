@@ -105,6 +105,37 @@
   border-color: var(--white);
 }
 
+.joinRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.joinLabel {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.joinSelect {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(249, 249, 249, 0.4);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--white);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.joinSelect:focus-visible {
+  outline: none;
+  border-color: var(--white);
+}
+.joinSelect option {
+  background: var(--panel);
+  color: var(--white);
+}
+
 .songCanvas {
   display: grid;
   place-items: center;
