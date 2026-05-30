@@ -44,3 +44,21 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.subtitle {
+  margin: -0.25rem 0 0;
+  color: var(--dark);
+  font-size: 0.9rem;
+  opacity: 0.78;
+}
+.subtitle strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

@@ -189,6 +189,10 @@ export function EditorScreen() {
   }
 
   async function handleSave(name: string) {
+    // id === name in our model, so "save to existing" and "save as new"
+    // both reduce to a save({id: name, ...}) call here — the overwrite
+    // flag from the dialog becomes meaningful only when we move to
+    // separate uuid ids (see NEXT-STEPS.md).
     const song = {
       id: name,
       name,
@@ -283,6 +287,8 @@ export function EditorScreen() {
 
       <SaveDialog
         open={saveOpen}
+        existingName={state.name ?? undefined}
+        defaultName={state.name ?? ''}
         onCancel={() => setSaveOpen(false)}
         onSave={handleSave}
       />
