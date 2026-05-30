@@ -157,6 +157,20 @@
   background: rgba(249, 249, 249, 0.12);
 }
 
+/* Toggled controls (currently: the lock) get a filled state so the
+   on/off distinction reads at a glance — the emoji alone is too subtle
+   and renders inconsistently across platforms. */
+.ctrl[aria-pressed='true'] {
+  background: var(--highlight-chord);
+  border-color: var(--highlight-chord);
+  color: var(--dark);
+  font-weight: 600;
+}
+.ctrl[aria-pressed='true']:hover {
+  background: var(--highlight-chord);
+  filter: brightness(1.08);
+}
+
 .voicingName {
   letter-spacing: 0.02em;
 }
@@ -190,15 +204,33 @@
   opacity: 1;
 }
 
-/* A locked chord is visually pinned and dimmed slightly. */
-.locked .chord {
-  opacity: 0.85;
+/* A locked chord stands out — a solid teal border + a small "LOCKED"
+   tag so it's obvious at a glance which positions Suggest will leave
+   alone. (The dashed-border + opacity-dim was too subtle.) */
+.locked {
+  position: relative;
 }
 .locked::after {
   content: '';
   position: absolute;
-  inset: -4px -2px 28px;
-  border: 1px dashed rgba(249, 249, 249, 0.4);
-  border-radius: 10px;
+  inset: -6px -4px 24px;
+  border: 2px solid var(--highlight-chord);
+  border-radius: 12px;
   pointer-events: none;
+}
+.locked::before {
+  content: 'LOCKED';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.05rem 0.4rem;
+  background: var(--highlight-chord);
+  color: var(--dark);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: var(--radius-pill);
+  pointer-events: none;
+  z-index: 1;
 }
