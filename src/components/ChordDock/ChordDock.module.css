@@ -27,7 +27,10 @@
   gap: 0.4rem;
 }
 
-@media (min-width: 720px) {
+/* Only collapse to a single row once there's genuinely room for all 7 numerals
+   AND the 6 action buttons side-by-side. Below this, stack the two groups so
+   numerals and actions each get their full row instead of wrapping awkwardly. */
+@media (min-width: 1100px) {
   .dock {
     flex-wrap: nowrap;
     justify-content: space-between;

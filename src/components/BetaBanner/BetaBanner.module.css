@@ -38,6 +38,20 @@
   color: var(--gray-light);
 }
 
+/* Tighten on phones: the supplementary CTA isn't worth 3 vertical lines on a
+   360px screen — keep the Beta badge + the primary sentence; drop the rest. */
+@media (max-width: 520px) {
+  .banner {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    gap: 8px;
+  }
+  .link,
+  .muted {
+    display: none;
+  }
+}
+
 .close {
   flex: none;
   width: 28px;
