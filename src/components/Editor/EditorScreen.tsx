@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import type { Chord } from '@/lib/theory/types'
@@ -16,11 +17,20 @@ import { playChord, playProgression, setMuted } from '@/lib/audio/audio-engine'
 import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
 import { getStorage } from '@/lib/storage'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
-import { exportProgressionVideo, progressionBasename } from '@/lib/video/record'
+// progressionBasename is split out of record.ts so importing it doesn't drag
+// in MediaRecorder + canvas code. The real exporter is lazy-loaded below.
+import { progressionBasename } from '@/lib/video/naming'
 import { lessonForSource, type Lesson } from '@/lib/theory/lessons'
 import { BetaBanner } from '@/components/BetaBanner/BetaBanner'
-import { VideoModal } from '@/components/VideoModal/VideoModal'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
+
+// VideoModal is only rendered after a successful export. Lazy-load it so the
+// initial bundle doesn't ship the modal + its video preview code for users
+// who never tap Video.
+const VideoModal = dynamic(
+  () => import('@/components/VideoModal/VideoModal').then((m) => m.VideoModal),
+  { ssr: false },
+)
 import { ChordDock } from '@/components/ChordDock/ChordDock'
 import { KeyDrawer } from '@/components/KeyDrawer/KeyDrawer'
 import { LessonPanel } from '@/components/LessonPanel/LessonPanel'
@@ -103,6 +113,9 @@ export function EditorScreen() {
     if (videoBusy) return
     setVideoBusy(true)
     try {
+      // Lazy-load the MediaRecorder + canvas exporter on first click; users
+      // who never use Video don't pay its bundle cost.
+      const { exportProgressionVideo } = await import('@/lib/video/record')
       const blob = await exportProgressionVideo(chords, {
         extensions,
         bpm: state.bpm,

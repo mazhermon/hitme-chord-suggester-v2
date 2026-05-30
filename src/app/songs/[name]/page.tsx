@@ -3,18 +3,24 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { getStorage, type Song } from '@/lib/storage'
 import { ChordDisplay } from '@/components/ChordDisplay/ChordDisplay'
 import { playChord, playProgression } from '@/lib/audio/audio-engine'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
-import {
-  exportProgressionVideo,
-  progressionBasename,
-} from '@/lib/video/record'
+// progressionBasename is split out of record.ts so the page can import it
+// without pulling in MediaRecorder + canvas code. The real exporter is
+// lazy-loaded inside handleExportVideo.
+import { progressionBasename } from '@/lib/video/naming'
 import { flagsFromLevel, type ExtensionFlags } from '@/lib/theory/extensions'
 import { Button } from '@/components/Button/Button'
-import { VideoModal } from '@/components/VideoModal/VideoModal'
 import styles from '../songs.module.css'
+
+// VideoModal only renders after a successful export — lazy-load it.
+const VideoModal = dynamic(
+  () => import('@/components/VideoModal/VideoModal').then((m) => m.VideoModal),
+  { ssr: false },
+)
 
 /** Per-chord extension flags for a saved song (with sensible fallbacks). */
 function songExtensions(song: Song): ExtensionFlags[] {
@@ -53,6 +59,7 @@ export default function SongPage() {
     if (!song || videoBusy) return
     setVideoBusy(true)
     try {
+      const { exportProgressionVideo } = await import('@/lib/video/record')
       const blob = await exportProgressionVideo(song.chords, {
         extensions: songExtensions(song),
       })

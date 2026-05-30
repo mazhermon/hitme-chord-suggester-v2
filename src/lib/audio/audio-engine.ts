@@ -140,6 +140,10 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   voice.gain.linearRampToValueAtTime(0.0001, releaseStart + env.release)
   const stopAt = releaseStart + env.release + 0.05
 
+  // Track when the last oscillator ends so we can disconnect the voice gain
+  // node. Without this, every chord leaks a GainNode that stays connected to
+  // masterGain forever — small but unbounded over a long session.
+  let remaining = freqs.length
   for (const frequency of freqs) {
     const osc = audio.createOscillator()
     osc.type = env.waveform
@@ -147,6 +151,9 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
     osc.connect(voice)
     osc.start(start)
     osc.stop(stopAt)
+    osc.onended = () => {
+      if (--remaining === 0) voice.disconnect()
+    }
   }
 }
 
