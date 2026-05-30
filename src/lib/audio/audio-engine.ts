@@ -1,6 +1,7 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
 import { DEFAULT_ENVELOPE, type EnvelopeSettings, type Waveform } from './envelope'
 import type { ExtensionFlags } from '../theory/extensions'
+import { midiToFreq } from '../theory/notes'
 
 /**
  * Web Audio API synth: schedules oscillator + gain "voices" with an ADSR
@@ -198,6 +199,23 @@ export function playChord(
     return
   }
   playFrequencies(freqs, options)
+}
+
+/**
+ * Play a single note (used to preview a chord's root the moment the user
+ * taps a numeral in the dock — so they hear what they're inputting even
+ * before the chord is rendered). Short, quiet, blocky.
+ */
+export function playNote(
+  midi: number,
+  options: PlayOptions = {},
+): void {
+  const freq = midiToFreq(midi)
+  playFrequencies([freq], {
+    duration: 0.5,
+    gain: 0.18,
+    ...options,
+  })
 }
 
 export interface ProgressionOptions {

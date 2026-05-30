@@ -2,8 +2,12 @@
 
 import type { Chord } from '@/lib/theory/types'
 import { ROMAN_NUMERALS } from '@/lib/theory/nashville'
+import { realizeChord } from '@/lib/theory/chords'
 import { useEditor } from '@/state/EditorProvider'
 import { displayChords } from '@/state/editor'
+import { playNote } from '@/lib/audio/audio-engine'
+import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
+import { Note } from 'tonal'
 import { Button } from '@/components/Button/Button'
 import styles from './ChordDock.module.css'
 
@@ -35,7 +39,18 @@ export function ChordDock({
             <Button
               variant="ghost"
               aria-label={`Add chord ${roman}`}
-              onClick={() => dispatch({ type: 'addChord', degree })}
+              onClick={() => {
+                dispatch({ type: 'addChord', degree })
+                // Preview the root note so the user hears what they're
+                // inputting before the chord renders. Use the same base
+                // octave as the synth so it sits in context.
+                const chord = realizeChord(degree, state.key)
+                const baseOctave = DEFAULT_BASE_OCTAVE + state.octave
+                const midi = Note.midi(`${chord.root}${baseOctave}`)
+                if (midi !== null) {
+                  playNote(midi, { envelope: state.envelope })
+                }
+              }}
             >
               {roman}
             </Button>

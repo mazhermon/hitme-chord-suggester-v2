@@ -117,24 +117,29 @@ See #5 — pairs with that decision.
 
 These block downstream work and only you can pick.
 
-### D-1. Auth provider choice
-Pick one of {Google, email magic link, anon-first}. Influences:
-- Firestore data shape (top-level vs `users/{uid}`)
-- UI (sign-in button vs sign-in form vs upgrade modal)
-- Cost (all three are free at our volume on Firebase's Spark plan)
+### D-1. Auth provider choice — RESOLVED (partial)
+**Decided (2026-05-30):** anonymous-first → magic-link upgrade UX. Deploy
+target is **Vercel**. App is intended for **public use**. See
+`docs/AUTH-PLAN.md` for the full UX flow and provider analysis.
 
-### D-2. Deploy target
-Vercel (default — the roadmap presumes this) vs Firebase Hosting (one
-fewer vendor, since we already use Firestore) vs Cloudflare Pages
-(cheapest, Worker support if we ever want server functions). Influences
-the CSP allowed-origins list, the CI provider, the domain setup.
+**Still pending — bring up before starting auth work:**
 
-### D-3. Public vs personal app
-Is this a personal songwriting tool you publish for fun, or are you
-building toward something with real users? Influences:
-- How much we invest in auth, rules, support flows
-- Whether we add analytics + feedback funnel
-- Whether the `--ultra` design polish is worth more time
+- **D-1a — Provider:** Supabase (Claude's recommendation, ~half-day
+  migration cost; ~half the bundle; portable Postgres; predictable
+  pricing) vs stay on Firebase (zero migration; we already have ~50 LOC
+  of Firestore wiring). Either ships the same UX.
+- **D-1b — Email sender:** Resend's free tier (3K emails/mo, simplest
+  setup) or wire SendGrid/Postmark/SES.
+
+Once both are answered I'll write the phase-by-phase implementation
+plan and execute on a fresh `auth-and-cloud-sync` branch.
+
+### D-2. Deploy target — RESOLVED
+**Decided (2026-05-30): Vercel.**
+
+### D-3. Public vs personal app — RESOLVED
+**Decided (2026-05-30): public.** Influences how seriously we treat
+auth, RLS rules, support flows, and analytics — all stay in scope.
 
 ### D-4. Should genre presets get a "lush" example with layered waveforms?
 With Phase F shipped, we now have the capability. Could add a 5th preset
