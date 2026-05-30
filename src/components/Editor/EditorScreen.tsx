@@ -201,6 +201,12 @@ export function EditorScreen() {
       extensions: state.extensions,
       chordExtensions: extensions,
       locked: state.slots.map((s) => s.locked),
+      // Audio shaping travels with the song so playback sounds the same
+      // wherever it's reopened (editor or detail page) — see ADR-007.
+      envelope: state.envelope,
+      bpm: state.bpm,
+      octave: state.octave,
+      style: state.style,
       createdAt: Date.now(),
     }
     await getStorage().save(song)

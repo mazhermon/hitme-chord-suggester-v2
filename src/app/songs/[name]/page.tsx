@@ -11,6 +11,7 @@ import {
   playProgression,
   type PlaybackHandle,
 } from '@/lib/audio/audio-engine'
+import { DEFAULT_BASE_OCTAVE } from '@/lib/audio/voicing'
 import { progressionToMidi, downloadMidi } from '@/lib/midi/export'
 // progressionBasename is split out of record.ts so the page can import it
 // without pulling in MediaRecorder + canvas code. The real exporter is
@@ -56,8 +57,18 @@ export default function SongPage() {
   function playAll() {
     if (!song) return
     stopPlayback()
+    // Use the song's saved audio shaping so the detail page sounds the same
+    // as the editor did when the song was saved. Falls back to engine
+    // defaults for songs saved before envelope/bpm/octave were persisted.
+    const baseOctave =
+      typeof song.octave === 'number'
+        ? DEFAULT_BASE_OCTAVE + song.octave
+        : undefined
     const handle = playProgression(song.chords, {
       extensions: songExtensions(song),
+      envelope: song.envelope,
+      bpm: song.bpm,
+      baseOctave,
     })
     playbackHandle.current = handle
     setIsPlaying(true)
@@ -135,6 +146,11 @@ export default function SongPage() {
               onPlay={(chord, index) =>
                 playChord(chord, {
                   extensions: songExtensions(song)[index],
+                  envelope: song.envelope,
+                  baseOctave:
+                    typeof song.octave === 'number'
+                      ? DEFAULT_BASE_OCTAVE + song.octave
+                      : undefined,
                   arpeggio: true,
                 })
               }

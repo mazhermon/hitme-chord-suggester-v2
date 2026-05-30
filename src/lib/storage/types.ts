@@ -1,5 +1,7 @@
 import type { Chord, KeyContext } from '../theory/types'
 import type { ExtensionFlags } from '../theory/extensions'
+import type { EnvelopeSettings } from '../audio/envelope'
+import type { StyleId } from '../theory/styles'
 
 /** A saved progression. */
 export interface Song {
@@ -14,6 +16,14 @@ export interface Song {
   chordExtensions?: ExtensionFlags[]
   /** Which chords were locked, by index. */
   locked?: boolean[]
+  /** Saved audio shaping — restored when the song is reopened or played. */
+  envelope?: EnvelopeSettings
+  /** Saved playback tempo (BPM). */
+  bpm?: number
+  /** Saved playback octave shift (-2 … +2). */
+  octave?: number
+  /** Saved genre/style preset, so suggest behaviour is preserved on reload. */
+  style?: StyleId
 }
 
 /** Minimal key/value backend (a subset of the Web Storage API). */
