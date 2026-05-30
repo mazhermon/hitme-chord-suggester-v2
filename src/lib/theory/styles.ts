@@ -44,7 +44,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.18,
       sustain: 0.55,
       release: 0.5,
-      waveform: 'triangle',
+      waveforms: ['triangle'],
     },
   },
 
@@ -65,7 +65,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.12,
       sustain: 0.25,
       release: 0.25,
-      waveform: 'triangle',
+      waveforms: ['triangle'],
     },
   },
 
@@ -92,7 +92,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.1,
       sustain: 0.6,
       release: 0.3,
-      waveform: 'sawtooth',
+      waveforms: ['sawtooth'],
     },
   },
 
@@ -119,7 +119,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.2,
       sustain: 0.8,
       release: 0.8,
-      waveform: 'sine',
+      waveforms: ['sine'],
     },
   },
 }

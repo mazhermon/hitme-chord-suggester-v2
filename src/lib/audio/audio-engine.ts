@@ -1,5 +1,5 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
-import { DEFAULT_ENVELOPE, type EnvelopeSettings } from './envelope'
+import { DEFAULT_ENVELOPE, type EnvelopeSettings, type Waveform } from './envelope'
 import type { ExtensionFlags } from '../theory/extensions'
 
 /**
@@ -140,19 +140,36 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   voice.gain.linearRampToValueAtTime(0.0001, releaseStart + env.release)
   const stopAt = releaseStart + env.release + 0.05
 
-  // Track when the last oscillator ends so we can disconnect the voice gain
-  // node. Without this, every chord leaks a GainNode that stays connected to
-  // masterGain forever — small but unbounded over a long session.
-  let remaining = freqs.length
+  // Each frequency gets one oscillator per enabled waveform, all summed into
+  // the same voice gain. Per-voice gain was already scaled before we got here
+  // (see `peak` above); we additionally divide the per-oscillator output by
+  // waveformCount so layered waveforms don't 4× the amplitude and clip. Track
+  // when the last oscillator ends so we can disconnect the voice GainNode —
+  // without this every chord leaks a node into masterGain forever.
+  const waveforms: Waveform[] =
+    env.waveforms.length > 0 ? env.waveforms : ['triangle']
+  const waveformCount = waveforms.length
+  const perOscGain = waveformCount === 1 ? null : audio.createGain()
+  if (perOscGain) {
+    perOscGain.gain.value = 1 / waveformCount
+    perOscGain.connect(voice)
+  }
+  const sink = perOscGain ?? voice
+  let remaining = freqs.length * waveformCount
   for (const frequency of freqs) {
-    const osc = audio.createOscillator()
-    osc.type = env.waveform
-    osc.frequency.value = frequency
-    osc.connect(voice)
-    osc.start(start)
-    osc.stop(stopAt)
-    osc.onended = () => {
-      if (--remaining === 0) voice.disconnect()
+    for (const wf of waveforms) {
+      const osc = audio.createOscillator()
+      osc.type = wf
+      osc.frequency.value = frequency
+      osc.connect(sink)
+      osc.start(start)
+      osc.stop(stopAt)
+      osc.onended = () => {
+        if (--remaining === 0) {
+          if (perOscGain) perOscGain.disconnect()
+          voice.disconnect()
+        }
+      }
     }
   }
 }

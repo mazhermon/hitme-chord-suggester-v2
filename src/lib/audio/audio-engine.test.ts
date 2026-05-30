@@ -32,3 +32,24 @@ describe('primeAudioForMobile', () => {
     ).not.toThrow()
   })
 })
+
+// Smoke check for the type contract: the engine must accept an envelope with
+// multiple waveforms without crashing the type-checker. (We can't easily test
+// the actual oscillator graph in jsdom — that's covered by the Playwright
+// audio smoke and by manual ear-test in the browser.)
+import type { EnvelopeSettings } from './envelope'
+
+describe('EnvelopeSettings', () => {
+  it('accepts one or many waveforms', () => {
+    const one: EnvelopeSettings = {
+      attack: 0,
+      decay: 0,
+      sustain: 1,
+      release: 0.1,
+      waveforms: ['sine'],
+    }
+    const many: EnvelopeSettings = { ...one, waveforms: ['sine', 'triangle', 'sawtooth', 'square'] }
+    expect(one.waveforms).toHaveLength(1)
+    expect(many.waveforms).toHaveLength(4)
+  })
+})
