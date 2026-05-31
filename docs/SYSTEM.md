@@ -35,21 +35,32 @@ flowchart LR
   app["chordHelperv2<br/>(Next.js web app)"]
   speakers[("Browser audio<br/>output (Web Audio<br/>→ speakers / headphones)")]
   daw[("User's DAW<br/>Logic / Ableton / etc.")]
-  firestore[("Firebase Firestore<br/>(optional, env-gated)")]
+  supabase[("Supabase<br/>Postgres + Auth<br/>(env-gated)")]
+  resend[("Resend SMTP<br/>(magic-link email)")]
+  vercel[("Vercel Cron<br/>(daily keep-alive)")]
   share[("Social platforms<br/>(roadmap)")]
 
   user -- "taps numerals,<br/>Suggest, Play, Save" --> app
   app -- "schedules notes" --> speakers
   app -- ".mid download<br/>(no tempo event)" --> daw
-  app -- "songs (when configured)" --> firestore
+  app -- "songs + auth (when configured)" --> supabase
+  supabase -- "magic-link / pw-reset emails" --> resend
+  resend -- "delivers link to" --> user
+  vercel -- "/api/keepalive (every 3 days)" --> app
   app -. "9:16 mp4 export" .-> share
 ```
 
 **Notes**
 - The musician runs the app in a browser on their phone or laptop — the app has **no
   bespoke backend**; Next.js serves static pages and the only "service" call is the
-  optional Firestore SDK from the browser.
+  optional Supabase SDK from the browser.
 - The DAW relationship is one-way (we export, they consume) — there's no MIDI input.
+- **Resend** is the SMTP provider Supabase Auth uses to send magic-link + password-reset
+  emails. Swapping providers is a Supabase-dashboard change, not a code change (ADR-007).
+- **Vercel Cron** hits `/api/keepalive` every 3 days to keep the Supabase free-tier
+  project from auto-pausing after 7 days of inactivity (ADR-008).
+- Legacy: the Firebase Firestore adapter still lives in `src/lib/storage/firestore.ts`
+  for backwards compatibility; Supabase is the primary path from now on.
 - Social platforms are dashed: the video file exists today but the share integrations
   are on the [roadmap](./roadmap/04-social-share-integrations.md).
 
@@ -63,31 +74,43 @@ What's running inside the app, and where the boundaries are.
 flowchart TB
   subgraph nextjs["Next.js 16 build/host"]
     direction TB
-    static["Static pages<br/>/ and /songs<br/>(prerendered)"]
-    ssr["/songs/[name]<br/>(server-rendered<br/>per request)"]
+    static["Static pages<br/>/, /songs, /auth/callback"]
+    ssr["/songs/[name]<br/>(server-rendered)"]
+    cron["/api/keepalive<br/>(edge route)"]
   end
 
   subgraph browser["Browser runtime (the actual app)"]
     direction TB
-    react["React 19 client tree<br/>(EditorProvider context +<br/>reducer-driven state)"]
-    webaudio[/"Web Audio API<br/>(AudioContext + gain<br/>+ oscillators)"/]
+    react["React 19 client tree<br/>(EditorProvider + reducer)"]
+    auth["useAuth / useStorage hooks<br/>(Port + Adapter selector)"]
+    webaudio[/"Web Audio API<br/>(AudioContext + gain + oscillators)"/]
     recorder[/"MediaRecorder API<br/>(canvas → webm/mp4)"/]
-    localstore[(localStorage<br/>chordhelper.songs)]
+    localstore[("localStorage<br/>(anonymous songs)")]
+    idb[("IndexedDB<br/>(per-user cache,<br/>offline reads)")]
   end
 
-  firestore[(Firestore<br/>collection: songs)]
+  subgraph cloud["Supabase (when env vars set)"]
+    direction TB
+    sb_auth[("Auth — JWT,<br/>magic link, password,<br/>anonymous")]
+    sb_db[("Postgres<br/>public.songs (RLS),<br/>delete_account() RPC")]
+  end
 
   nextjs -- "HTML + hydrating JS" --> react
+  react --> auth
   react -- "play / arpeggio" --> webaudio
   react -- "record video export" --> recorder
   recorder -- "tap of master gain" --> webaudio
-  react -- "save / list / get / remove" --> localstore
-  react -. "save / list / get / remove<br/>(when NEXT_PUBLIC_FIREBASE_* set)" .-> firestore
+  auth -- "anonymous mode" --> localstore
+  auth -. "authenticated, read/write through" .-> idb
+  idb -. "sync (read-through, write-queue)" .-> sb_db
+  auth -. "sign-in, sign-out, deleteAccount" .-> sb_auth
+  cron -. "every 3 days" .-> sb_db
 ```
 
 **Notes**
-- There is **no API layer of our own**. The browser talks directly to Firestore via the
-  Firebase JS SDK when configured. Otherwise everything is local.
+- There is **no API layer of our own**. The browser talks directly to Supabase via
+  `@supabase/supabase-js`. The only Next.js server route is `/api/keepalive`, which is a
+  cron handler the app itself doesn't depend on.
 - `MediaRecorder` taps the synth's master gain node via `createMediaStreamDestination`,
   so the exported video has the same sound the user heard.
 - The Web Audio container is also where the **iOS audio-session routing** lives — it
@@ -110,8 +133,10 @@ flowchart LR
   end
 
   subgraph state["src/state/"]
-    reducer["editor.ts<br/>slot model: base+sub+locked,<br/>suggest re-rolls 1–2 slots"]
+    reducer["editor.ts<br/>slot model + envelopeDirty<br/>(sticky synth sound)"]
     provider["EditorProvider.tsx<br/>(React context)"]
+    useauth["useAuth<br/>(over AuthProvider Port)"]
+    usestorage["useStorage<br/>(local ↔ cloud switch +<br/>migration trigger)"]
   end
 
   subgraph ui["src/components/"]
@@ -121,6 +146,8 @@ flowchart LR
     drawer["KeyDrawer (sidebar)"]
     lesson["LessonPanel"]
     save["SaveDialog"]
+    signin["SignInDialog<br/>(magic link + password)"]
+    authchip["AuthChip<br/>(header signed-in menu)"]
     video["VideoModal"]
     guitardiag["ChordDiagram (guitar)"]
     pianodiag["PianoChord"]
@@ -140,18 +167,28 @@ flowchart LR
   subgraph io["src/lib/* (I/O)"]
     midi["midi/export.ts<br/>(midi-writer-js)"]
     videolib["video/record.ts<br/>(MediaRecorder + canvas timeline)"]
-    storage["storage/<br/>StorageProvider:<br/>local | Firestore"]
+    storage["storage/<br/>local, firestore, supabase<br/>+ cached wrapper + migration"]
+    authlib["auth/<br/>local, supabase<br/>(Port + Adapter)"]
     guitar["guitar/voicing.ts<br/>(fretboard finder)"]
     piano["piano/keyboard.ts"]
+  end
+
+  subgraph api["src/app/api/"]
+    keepalive["/api/keepalive<br/>(Vercel Cron)"]
   end
 
   home --> screen
   songs --> save
   song --> save
 
-  screen --> provider
+  screen --> provider & signin & authchip
   provider --> reducer
   screen --> dock & drawer & display & lesson & save & video
+  screen --> usestorage & useauth
+  signin --> useauth
+  authchip --> useauth
+  usestorage --> storage
+  useauth --> authlib
 
   display --> guitardiag & pianodiag
   guitardiag --> guitar
@@ -165,10 +202,11 @@ flowchart LR
   engine --> voicing
   voicing --> keys
 
-  screen --> midi & videolib & storage
+  screen --> midi & videolib
   midi --> voicing
   videolib --> engine
   pianodiag --> voicing
+  keepalive --> storage
 ```
 
 **The one rule that holds the audio layer together:** `chordToMidi` (in `voicing.ts`) is
@@ -302,20 +340,23 @@ flag to forget to set/clear.
 
 ---
 
-## ADR-005 — Local-first storage, optional Firestore via env
+## ADR-005 — Local-first storage, optional cloud (Supabase) via env
 
-**Decision.** `getStorage()` returns the Firestore provider when
-`NEXT_PUBLIC_FIREBASE_*` env vars are present, else the localStorage provider. Both
-implement the same `StorageProvider` interface (`list`, `get`, `save`, `remove`).
+**Decision.** `useStorage()` returns the local provider for anonymous /
+signed-out / loading states and an IndexedDB-cached Supabase provider once a
+user is authenticated. All providers implement the same `StorageProvider`
+Port. The original Firestore adapter remains for backwards compatibility.
 
-**Why.** The app is useful from minute one without configuration — paste the URL,
-write a progression, save it, come back to it. Cloud sync is a "later, when you want
-multi-device" upgrade, not a sign-up wall.
+**Why.** The app is useful from minute one without configuration — write a
+progression, save it, come back to it. Cloud sync becomes available the
+moment a user wants their songs across devices. We frame it as a benefit
+("keep your songs across devices") rather than an account-creation wall.
 
-**Consequence.** No auth yet (a known limitation — see
-[roadmap/01-database-and-auth.md](./roadmap/01-database-and-auth.md)). Today, a
-Firestore-configured deployment shares the `songs` collection across every visitor;
-fine for a single user, not for public hosting. Auth is the next storage step.
+**Consequence.** Anonymous users keep working entirely on-device. On first
+sign-in, `migrateLocalToCloud` upserts their local songs into the cloud
+without clobbering rows that already exist there (e.g. edits made on
+another device). After sign-in, IndexedDB serves reads while offline; writes
+queue locally and flush on the next list().
 
 ---
 
@@ -335,6 +376,68 @@ channel, same as a music player.
 **Consequence.** Pre-iOS 16.4 devices still go through the ringer (we no-op silently);
 all later versions get the right behaviour. The silent-buffer trick belt-and-braces the
 context unlock on the first gesture. See `src/lib/audio/audio-engine.test.ts`.
+
+---
+
+## ADR-007 — Auth provider via Port + Adapter (Supabase chosen, swappable)
+
+**Decision.** Define an `AuthProvider` Port in `src/lib/auth/types.ts` and
+implement adapters per backend. Today: `LocalAuthAdapter` (anonymous-only,
+no env) and `SupabaseAuthAdapter` (lazy-loaded when
+`NEXT_PUBLIC_SUPABASE_*` env vars are set). Components only consume the
+`useAuth()` hook over the Port — never the adapter directly.
+
+**Why.** Portability was the highest-weighted goal in `AUTH-RESEARCH.md`.
+Postgres is the lingua franca of databases; Supabase Auth uses standard
+JWTs; the rest of our app's auth surface is small enough that a future
+adapter swap is hours of work, not days. The Port hides provider-specific
+quirks (URL fragment vs query-string magic links, SDK initialisation
+shapes, error code mappings) behind a single interface.
+
+**Consequence.** Anonymous sign-in works in both modes — local mode persists
+a per-device UUID in `localStorage`; Supabase mode uses
+`signInAnonymously()` which produces a `is_anonymous` JWT. Email sender is
+configured at the Supabase dashboard level (Resend today, swappable to
+SendGrid/Postmark/SES without code change). See `docs/SUPABASE-SETUP.md`.
+
+---
+
+## ADR-008 — Vercel Cron keep-alive for Supabase free tier
+
+**Decision.** Add a `vercel.json` cron entry that pings `/api/keepalive`
+every 3 days at 06:00 UTC. The route runs a trivial `select` against a
+`public.keepalive` view so the Supabase free-tier project doesn't auto-pause
+after 7 days of inactivity.
+
+**Why.** Supabase pauses free-tier projects after a week of zero queries.
+For a personal/early-stage app this can happen on a quiet weekend and break
+sign-in until the maintainer manually wakes the project. A cron query
+inside Vercel's free Hobby cron quota costs nothing and keeps the project
+warm forever.
+
+**Consequence.** When we leave the free tier this becomes optional (paid
+projects don't pause). The route itself is authorised via the
+`x-vercel-cron` header for the scheduled hit and a `CRON_SECRET` query for
+manual testing — no sensitive work happens inside, so it's not a real
+security boundary.
+
+---
+
+## ADR-009 — Sticky synth sound
+
+**Decision.** Track `envelopeDirty` on the editor state. Once the user
+touches the envelope or mix, `setStyle` (genre click) no longer overwrites
+the synth sound — it still updates substitutions, weights, and extensions.
+`loadSong` resets the flag, because a saved song's audio settings are the
+new canonical sound.
+
+**Why.** Users dial in a sound they like, then explore different
+suggestion behaviours via the genre buttons. Resetting the synth on every
+genre click is destructive.
+
+**Consequence.** Songs save their full audio settings (`envelope`, `bpm`,
+`octave`, `style`) so the saved-song view sounds the same as the editor
+did when saved.
 
 ---
 

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getAuth } from '@/lib/auth'
+import styles from './page.module.css'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -38,27 +39,18 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <main
-      style={{
-        display: 'grid',
-        placeItems: 'center',
-        minHeight: '100vh',
-        padding: '1rem',
-      }}
-    >
-      <div style={{ textAlign: 'center', maxWidth: 360 }}>
+    <main className={styles.page}>
+      <div className={styles.card}>
         {error ? (
           <>
-            <h1 style={{ fontSize: '1.4rem', margin: '0 0 0.6rem' }}>
-              That link didn&apos;t work
-            </h1>
-            <p style={{ opacity: 0.8 }}>{error}</p>
-            <p style={{ marginTop: '1rem' }}>
+            <h1 className={styles.title}>That link didn&apos;t work</h1>
+            <p className={styles.muted}>{error}</p>
+            <p className={styles.note}>
               <Link href="/">Head home and try again</Link>
             </p>
           </>
         ) : (
-          <p style={{ opacity: 0.8 }}>Signing you in…</p>
+          <p className={styles.muted}>Signing you in…</p>
         )}
       </div>
     </main>
