@@ -63,21 +63,21 @@ npm run build
 npm run e2e        # Playwright (optional)
 ```
 
-## Firebase (optional)
+## Cloud auth + sync (optional)
 
-Without config the app uses `localStorage`. To enable cloud sync, copy `.env.example` to
-`.env.local` and fill in your Firebase web-app credentials:
+Without env vars the app uses `localStorage` and stays single-device.
+With Supabase configured, users can sign in with a magic link (or
+password) and their songs sync across devices.
 
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=…
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=…
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=…
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=…
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=…
-NEXT_PUBLIC_FIREBASE_APP_ID=…
-```
+| Env var | Required | What it does |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | for cloud | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | for cloud | Supabase public anon key |
+| `CRON_SECRET` | for keep-alive | Random string; lets Vercel Cron ping `/api/keepalive` |
+| `NEXT_PUBLIC_FIREBASE_*` | legacy | Firestore adapter still works but Supabase is the primary path |
 
-Songs are stored in a Firestore collection named `songs`. (No auth yet — a natural next step.)
+Full step-by-step (Supabase project, SQL migration, Resend SMTP, Vercel
+env vars, DNS records): **[`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)**.
 
 ## Notes
 
