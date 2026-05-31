@@ -1,7 +1,54 @@
 import { createLocalProvider } from './local'
+import { createCachedSongRepository } from './cache'
 import type { StorageProvider } from './types'
 
 export type { Song, StorageProvider } from './types'
+export { migrateLocalToCloud } from './migration'
+
+/** True when the public Supabase env vars are set. */
+export function isSupabaseConfigured(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  )
+}
+
+/**
+ * Per-user cloud SongRepository — Supabase wrapped in an IndexedDB cache for
+ * offline reads. Lazy-loads the SDK and only constructs when called, so
+ * anonymous users never pay its bundle.
+ *
+ * @param userId The current authenticated user's id (used to namespace the
+ *   IndexedDB store so signing out can't expose A's songs to B).
+ */
+export function getCloudStorage(userId: string): StorageProvider {
+  let remotePromise: Promise<StorageProvider> | null = null
+  const remote = (): Promise<StorageProvider> =>
+    (remotePromise ??= import('./supabase').then((m) =>
+      m.createSupabaseSongRepository(),
+    ))
+
+  const proxy: StorageProvider = {
+    async list() {
+      return (await remote()).list()
+    },
+    async get(id) {
+      return (await remote()).get(id)
+    },
+    async save(s) {
+      return (await remote()).save(s)
+    },
+    async remove(id) {
+      return (await remote()).remove(id)
+    },
+    async importMany(songs) {
+      const r = await remote()
+      if (r.importMany) return r.importMany(songs)
+      for (const s of songs) await r.save(s)
+    },
+  }
+  return createCachedSongRepository(proxy, { userId })
+}
 
 /**
  * True when the public Firebase env vars are present. Until then the app uses

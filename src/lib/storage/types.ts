@@ -32,10 +32,22 @@ export interface KeyValueBackend {
   setItem(key: string, value: string): void
 }
 
-/** Persistence interface shared by the localStorage and Firestore providers. */
+/**
+ * Persistence Port. Adapters (local, Firestore, Supabase) provide concrete
+ * implementations. Cloud adapters know how to scope to the current user
+ * (RLS for Supabase, subcollections for Firestore); the app builds no
+ * queries directly. See docs/AUTH-RESEARCH.md §4.
+ */
 export interface StorageProvider {
   list(): Promise<Song[]>
   get(id: string): Promise<Song | null>
   save(song: Song): Promise<Song>
   remove(id: string): Promise<void>
+  /**
+   * Bulk import — used once on first sign-in to copy anonymous local songs
+   * into the user's cloud account. Optional so existing adapters (the
+   * Firestore one) compile without modification; callers should check at
+   * runtime and fall back to per-song save() when absent.
+   */
+  importMany?(songs: Song[]): Promise<void>
 }
