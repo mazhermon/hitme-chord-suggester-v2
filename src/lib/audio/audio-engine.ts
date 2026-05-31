@@ -1,5 +1,10 @@
 import { chordToFrequencies, type VoiceableChord } from './voicing'
-import { DEFAULT_ENVELOPE, type EnvelopeSettings, type Waveform } from './envelope'
+import {
+  DEFAULT_ENVELOPE,
+  resolveMix,
+  type EnvelopeSettings,
+  type Waveform,
+} from './envelope'
 import type { ExtensionFlags } from '../theory/extensions'
 import { midiToFreq } from '../theory/notes'
 
@@ -146,37 +151,35 @@ function playFrequencies(freqs: number[], options: PlayOptions = {}): void {
   voice.gain.linearRampToValueAtTime(0.0001, releaseStart + env.release)
   const stopAt = releaseStart + env.release + 0.05
 
-  // Each frequency gets one oscillator per enabled waveform, all summed into
-  // the same voice gain. Per-voice gain was already scaled before we got here
-  // (see `peak` above); we additionally divide the per-oscillator output by
-  // waveformCount so layered waveforms don't 4× the amplitude and clip. Track
-  // when the last oscillator ends so we can disconnect the voice GainNode —
-  // without this every chord leaks a node into masterGain forever.
-  const waveforms: Waveform[] =
-    env.waveforms.length > 0 ? env.waveforms : ['triangle']
-  const waveformCount = waveforms.length
-  const perOscGain = waveformCount === 1 ? null : audio.createGain()
-  if (perOscGain) {
-    perOscGain.gain.value = 1 / waveformCount
-    perOscGain.connect(voice)
-  }
-  const sink = perOscGain ?? voice
-  let remaining = freqs.length * waveformCount
+  // For each waveform with a non-zero mix value, create a per-waveform gain
+  // node at the normalised fraction, then layer one oscillator per frequency
+  // through it into the voice gain. Total amplitude across all waveforms is
+  // always 1× (no clipping, regardless of how many waveforms are mixed).
+  // Track oscillator end so we can disconnect every node we created — without
+  // this each chord would leak nodes into masterGain.
+  const entries = resolveMix(env)
+  const mixGains: GainNode[] = entries.map(([, fraction]) => {
+    const g = audio.createGain()
+    g.gain.value = fraction
+    g.connect(voice)
+    return g
+  })
+  let remaining = freqs.length * entries.length
   for (const frequency of freqs) {
-    for (const wf of waveforms) {
+    entries.forEach(([wf], i) => {
       const osc = audio.createOscillator()
-      osc.type = wf
+      osc.type = wf as Waveform
       osc.frequency.value = frequency
-      osc.connect(sink)
+      osc.connect(mixGains[i])
       osc.start(start)
       osc.stop(stopAt)
       osc.onended = () => {
         if (--remaining === 0) {
-          if (perOscGain) perOscGain.disconnect()
+          for (const g of mixGains) g.disconnect()
           voice.disconnect()
         }
       }
-    }
+    })
   }
 }
 

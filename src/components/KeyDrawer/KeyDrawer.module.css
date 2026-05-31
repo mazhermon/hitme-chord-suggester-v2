@@ -243,3 +243,20 @@
   font-size: 0.8rem;
   opacity: 0.85;
 }
+.envValue {
+  font-size: 0.72rem;
+  opacity: 0.78;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+}
+
+/* Per-waveform mix sliders: same envRow grid but with a value readout. */
+.waveMix {
+  margin-top: 0.8rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(249, 249, 249, 0.15);
+}
+.waveMix .envRow {
+  grid-template-columns: 64px 1fr 36px;
+}

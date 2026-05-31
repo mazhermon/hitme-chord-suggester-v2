@@ -7,7 +7,7 @@ import {
   type ExtensionFlags,
   type Extension,
 } from '@/lib/theory/extensions'
-import { type EnvelopeSettings } from '@/lib/audio/envelope'
+import { migrateEnvelope, type EnvelopeSettings } from '@/lib/audio/envelope'
 
 export type { Extension } from '@/lib/theory/extensions'
 
@@ -319,13 +319,17 @@ export function editorReducer(
       const stylePatch: Partial<ReturnType<typeof applyStyle>> = s.style
         ? applyStyle(STYLES[s.style])
         : {}
+      // Songs saved before the mix-slider feature have `waveforms: [...]`
+      // but no `mix`. migrateEnvelope populates an equal-weight mix so the
+      // UI sliders show sensible values right away.
+      const savedEnv = s.envelope ? migrateEnvelope(s.envelope) : undefined
       return {
         ...state,
         ...stylePatch,
         key: s.key,
         name: s.name ?? null,
         extensions: s.extensions ?? stylePatch.extensions ?? state.extensions,
-        envelope: s.envelope ?? stylePatch.envelope ?? state.envelope,
+        envelope: savedEnv ?? stylePatch.envelope ?? state.envelope,
         bpm: s.bpm ?? state.bpm,
         octave: typeof s.octave === 'number' ? s.octave : state.octave,
         slots: s.chords.map((c, i) => ({

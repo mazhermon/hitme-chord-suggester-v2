@@ -1,7 +1,7 @@
 import type { ExtensionLevel } from './extensions'
 import type { EnvelopeSettings } from '../audio/envelope'
 
-export type StyleId = 'jazz' | 'folk' | 'pop' | 'house'
+export type StyleId = 'jazz' | 'folk' | 'pop' | 'house' | 'lush'
 
 /**
  * A genre preset. Picking a style reconfigures the suggestion behaviour
@@ -44,7 +44,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.18,
       sustain: 0.55,
       release: 0.5,
-      waveforms: ['triangle'],
+      mix: { triangle: 100 },
     },
   },
 
@@ -65,7 +65,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.12,
       sustain: 0.25,
       release: 0.25,
-      waveforms: ['triangle'],
+      mix: { triangle: 100 },
     },
   },
 
@@ -92,7 +92,7 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.1,
       sustain: 0.6,
       release: 0.3,
-      waveforms: ['sawtooth'],
+      mix: { sawtooth: 100 },
     },
   },
 
@@ -119,7 +119,35 @@ export const STYLES: Record<StyleId, Style> = {
       decay: 0.2,
       sustain: 0.8,
       release: 0.8,
-      waveforms: ['sine'],
+      mix: { sine: 100 },
+    },
+  },
+
+  // Slow, warm pad: layered sine + triangle, long attack/release.
+  // Recommendation only — the mix sliders let users dial in their own.
+  lush: {
+    id: 'lush',
+    label: 'Lush',
+    description: 'Soft pad — sine + triangle, slow attack, long release.',
+    enabledStrategies: [
+      'modal-interchange',
+      'planing',
+      'suspension',
+      'diatonic-third',
+    ],
+    weights: {
+      'modal-interchange': 3,
+      planing: 2,
+      suspension: 2,
+      'diatonic-third': 1,
+    },
+    extensionLevel: 'ninth',
+    envelope: {
+      attack: 0.4,
+      decay: 0.3,
+      sustain: 0.85,
+      release: 1.8,
+      mix: { sine: 70, triangle: 30 },
     },
   },
 }
@@ -129,4 +157,5 @@ export const STYLE_LIST: Style[] = [
   STYLES.folk,
   STYLES.pop,
   STYLES.house,
+  STYLES.lush,
 ]
