@@ -32,6 +32,13 @@ export interface EditorState {
   weights: Record<string, number>
   extensions: ExtensionFlags
   envelope: EnvelopeSettings
+  /**
+   * True once the user has touched the envelope/mix manually. While true,
+   * `setStyle` still updates substitutions/extensions/weights but no longer
+   * overwrites the synth sound — the user's tweak is sticky until they load
+   * a different song or start fresh.
+   */
+  envelopeDirty: boolean
   bpm: number
   /** Playback octave offset (whole octaves, clamped to ±2). */
   octave: number
@@ -61,6 +68,7 @@ export const initialEditorState: EditorState = {
   muted: false,
   showGuitar: false,
   showPiano: false,
+  envelopeDirty: false,
   ...applyStyle(STYLES.jazz),
 }
 
@@ -240,8 +248,20 @@ export function editorReducer(
         })),
       }
 
-    case 'setStyle':
-      return { ...state, ...applyStyle(STYLES[action.style]) }
+    case 'setStyle': {
+      // When the user has manually tweaked the sound, picking a new genre
+      // updates the suggestion behaviour but doesn't overwrite their synth
+      // settings. Their sound is sticky until they load a saved song or
+      // start fresh.
+      const patch = applyStyle(STYLES[action.style])
+      if (state.envelopeDirty) {
+        // Drop envelope from the patch — keep the user's sticky sound.
+        const { envelope: _, ...rest } = patch
+        void _
+        return { ...state, ...rest }
+      }
+      return { ...state, ...patch }
+    }
 
     case 'toggleStrategy': {
       const enabled = state.enabledStrategies.includes(action.id)
@@ -286,7 +306,12 @@ export function editorReducer(
     }
 
     case 'setEnvelope':
-      return { ...state, envelope: { ...state.envelope, ...action.envelope } }
+      // Any manual envelope/mix change marks the sound as sticky.
+      return {
+        ...state,
+        envelope: { ...state.envelope, ...action.envelope },
+        envelopeDirty: true,
+      }
 
     case 'setBpm':
       return { ...state, bpm: action.bpm }
@@ -330,6 +355,9 @@ export function editorReducer(
         name: s.name ?? null,
         extensions: s.extensions ?? stylePatch.extensions ?? state.extensions,
         envelope: savedEnv ?? stylePatch.envelope ?? state.envelope,
+        // Loading a song resets the dirty flag — its saved envelope is the
+        // new canonical sound; future genre clicks should overwrite it.
+        envelopeDirty: false,
         bpm: s.bpm ?? state.bpm,
         octave: typeof s.octave === 'number' ? s.octave : state.octave,
         slots: s.chords.map((c, i) => ({
