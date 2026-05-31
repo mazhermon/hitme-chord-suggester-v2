@@ -28,10 +28,17 @@
   text-transform: uppercase;
 }
 
+/* Both <a> and the sign-in <button> share this style. Reset native button
+   chrome so the button looks like an inline link. */
 .link {
   color: var(--highlight-chord);
   text-decoration: underline;
   white-space: nowrap;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .muted {

@@ -40,6 +40,8 @@ import { ChordDock } from '@/components/ChordDock/ChordDock'
 import { KeyDrawer } from '@/components/KeyDrawer/KeyDrawer'
 import { LessonPanel } from '@/components/LessonPanel/LessonPanel'
 import { SaveDialog } from '@/components/SaveDialog/SaveDialog'
+import { SignInDialog } from '@/components/SignInDialog/SignInDialog'
+import { AuthChip } from '@/components/AuthChip/AuthChip'
 import styles from './EditorScreen.module.css'
 
 export function EditorScreen() {
@@ -47,6 +49,7 @@ export function EditorScreen() {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const [signInOpen, setSignInOpen] = useState(false)
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
@@ -222,7 +225,7 @@ export function EditorScreen() {
         ref={root}
         className={`${styles.screen} ${results ? styles.results : styles.input}`}
       >
-        <BetaBanner />
+        <BetaBanner onSignInClick={() => setSignInOpen(true)} />
 
         <header className={styles.header}>
           <h1 className="sr-only">Hit me — chord progression editor</h1>
@@ -235,6 +238,7 @@ export function EditorScreen() {
             <span />
             <span />
           </button>
+          <AuthChip />
         </header>
 
         <main className={styles.canvas}>
@@ -298,6 +302,8 @@ export function EditorScreen() {
         onCancel={() => setSaveOpen(false)}
         onSave={handleSave}
       />
+
+      <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
   )
 }

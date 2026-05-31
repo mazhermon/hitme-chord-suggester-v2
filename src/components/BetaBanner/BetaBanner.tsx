@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { FEEDBACK_FORM_URL } from '@/lib/config'
+import { isSupabaseConfigured } from '@/lib/auth'
+import { useAuth } from '@/state/useAuth'
 import styles from './BetaBanner.module.css'
 
 const DISMISS_KEY = 'chordhelper.beta-dismissed'
@@ -9,9 +11,23 @@ const DISMISS_KEY = 'chordhelper.beta-dismissed'
 interface BetaBannerProps {
   /** Feedback form URL; defaults to the configured one. */
   feedbackUrl?: string
+  /** Called when the user taps the sign-in CTA (auth-configured deployments). */
+  onSignInClick?: () => void
 }
 
-export function BetaBanner({ feedbackUrl = FEEDBACK_FORM_URL }: BetaBannerProps) {
+export function BetaBanner({
+  feedbackUrl = FEEDBACK_FORM_URL,
+  onSignInClick,
+}: BetaBannerProps) {
+  const { status } = useAuth()
+  const authConfigured = isSupabaseConfigured()
+  const showSignInCta =
+    authConfigured &&
+    onSignInClick &&
+    (status.state === 'anonymous' || status.state === 'signedOut')
+
+  // Hide entirely when authenticated — synced state needs no warning.
+  const hidden = authConfigured && status.state === 'authenticated'
   const [dismissed, setDismissed] = useState(false)
 
   // Restore a prior dismissal. Deferred to a timeout so we never set state
@@ -24,7 +40,7 @@ export function BetaBanner({ feedbackUrl = FEEDBACK_FORM_URL }: BetaBannerProps)
     return () => clearTimeout(id)
   }, [])
 
-  if (dismissed) return null
+  if (dismissed || hidden) return null
 
   function dismiss() {
     setDismissed(true)
@@ -39,20 +55,35 @@ export function BetaBanner({ feedbackUrl = FEEDBACK_FORM_URL }: BetaBannerProps)
     <div className={styles.banner} role="note">
       <p className={styles.text}>
         <span className={styles.badge}>Beta</span>
-        Your songs save on this device only for now.{' '}
-        {feedbackUrl ? (
-          <a
-            className={styles.link}
-            href={feedbackUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Want cloud save across devices? Tell us →
-          </a>
+        {showSignInCta ? (
+          <>
+            Songs save on this device.{' '}
+            <button
+              type="button"
+              className={styles.link}
+              onClick={onSignInClick}
+            >
+              Keep your songs across devices →
+            </button>
+          </>
         ) : (
-          <span className={styles.muted}>
-            Want cloud save across devices? Let us know.
-          </span>
+          <>
+            Your songs save on this device only for now.{' '}
+            {feedbackUrl ? (
+              <a
+                className={styles.link}
+                href={feedbackUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Want cloud save across devices? Tell us →
+              </a>
+            ) : (
+              <span className={styles.muted}>
+                Want cloud save across devices? Let us know.
+              </span>
+            )}
+          </>
         )}
       </p>
       <button

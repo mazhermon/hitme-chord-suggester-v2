@@ -1,0 +1,157 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(20, 26, 20, 0.45);
+  z-index: 40;
+}
+
+.dialog {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--dark);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--dark);
+}
+
+.subtitle {
+  margin: -0.5rem 0 0;
+  font-size: 0.88rem;
+  opacity: 0.78;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.tab,
+.tabOn {
+  padding: 0.45rem 0.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tabOn {
+  background: var(--green-deep);
+  color: var(--white);
+  font-weight: 500;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  opacity: 0.78;
+}
+
+.input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--gray-light);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--dark);
+}
+.input:focus-visible {
+  outline: 2px solid var(--green);
+  border-color: var(--green);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Match the SaveDialog override — ghost button text is white in the app,
+   but the dialog background is cream, so override here. */
+.dialog .actions button[class*='ghost'] span {
+  background: transparent;
+  color: var(--dark);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+.dialog .actions button[class*='ghost']:hover span {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.error {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  background: rgba(204, 64, 64, 0.1);
+  color: #8b1f1f;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.fineprint {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.switchRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.linkBtn {
+  border: 0;
+  background: transparent;
+  color: var(--green-deep);
+  font: inherit;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.linkBtn:hover {
+  color: var(--green-deeper);
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.successHead {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.success p {
+  margin: 0;
+  font-size: 0.9rem;
+}
