@@ -4,13 +4,21 @@ import { STRATEGIES } from './substitutions'
 const validIds = new Set(STRATEGIES.map((s) => s.id))
 
 describe('styles', () => {
-  it('defines the four genres', () => {
+  it('defines the five genres', () => {
     expect(STYLE_LIST.map((s) => s.id)).toEqual([
       'jazz',
       'folk',
       'pop',
       'house',
+      'lush',
     ] satisfies StyleId[])
+  })
+
+  it('makes lush a mostly-sine soft pad with a long release', () => {
+    const lush = STYLES.lush
+    expect(lush.envelope.mix?.sine ?? 0).toBeGreaterThan(0)
+    expect(lush.envelope.attack).toBeGreaterThan(0.2) // distinctly slow attack
+    expect(lush.envelope.release).toBeGreaterThan(1)
   })
 
   it('only references real substitution strategies', () => {

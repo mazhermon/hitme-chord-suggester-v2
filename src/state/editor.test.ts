@@ -172,6 +172,55 @@ describe('editorReducer — settings', () => {
     expect(s.bpm).toBe(120)
   })
 
+  it('marks the envelope dirty as soon as the user touches it', () => {
+    expect(initialEditorState.envelopeDirty).toBe(false)
+    const s = editorReducer(initialEditorState, {
+      type: 'setEnvelope',
+      envelope: { attack: 0.3 },
+    })
+    expect(s.envelopeDirty).toBe(true)
+  })
+
+  it('keeps the user sound when picking a new genre AFTER a manual tweak', () => {
+    // User customizes — envelope becomes dirty.
+    let s = editorReducer(initialEditorState, {
+      type: 'setEnvelope',
+      envelope: { attack: 0.42, mix: { sawtooth: 80, sine: 20 } },
+    })
+    expect(s.envelopeDirty).toBe(true)
+    const customEnvelope = s.envelope
+
+    // Now they pick House. Suggestion behaviour switches; sound stays.
+    s = editorReducer(s, { type: 'setStyle', style: 'house' })
+    expect(s.style).toBe('house')
+    expect(s.enabledStrategies).toContain('planing')
+    expect(s.envelope).toEqual(customEnvelope) // not overwritten
+    expect(s.envelopeDirty).toBe(true)
+  })
+
+  it('lets genre clicks overwrite the sound when the user has not tweaked it', () => {
+    // No manual tweak — picking Folk should adopt Folk's envelope.
+    const s = editorReducer(initialEditorState, {
+      type: 'setStyle',
+      style: 'folk',
+    })
+    expect(s.envelope.attack).toBe(STYLES.folk.envelope.attack)
+    expect(s.envelopeDirty).toBe(false)
+  })
+
+  it('resets the dirty flag when loading a saved song', () => {
+    let s = editorReducer(initialEditorState, {
+      type: 'setEnvelope',
+      envelope: { attack: 0.42 },
+    })
+    expect(s.envelopeDirty).toBe(true)
+    s = editorReducer(s, {
+      type: 'loadSong',
+      song: { key: { tonic: 'C', mode: 'major' }, chords: [] },
+    })
+    expect(s.envelopeDirty).toBe(false)
+  })
+
   it('loads a saved song', () => {
     const song = {
       key: G_MAJOR,

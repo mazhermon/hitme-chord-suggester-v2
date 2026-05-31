@@ -6,7 +6,7 @@ import { MAJOR_TONICS, MINOR_TONICS } from '@/lib/theory/keys'
 import { STRATEGIES } from '@/lib/theory/substitutions'
 import { STYLE_LIST } from '@/lib/theory/styles'
 import type { Mode } from '@/lib/theory/types'
-import type { Waveform } from '@/lib/audio/envelope'
+import { WAVEFORMS, type Waveform, type WaveformMix } from '@/lib/audio/envelope'
 import { useEditor } from '@/state/EditorProvider'
 import type { Extension } from '@/state/editor'
 import { CollapsibleSection } from '@/components/CollapsibleSection/CollapsibleSection'
@@ -17,7 +17,6 @@ interface KeyDrawerProps {
   onClose: () => void
 }
 
-const WAVEFORMS: Waveform[] = ['sine', 'triangle', 'sawtooth', 'square']
 const EXTENSIONS: { ext: Extension; label: string }[] = [
   { ext: 'seventh', label: '7th' },
   { ext: 'ninth', label: '9th' },
@@ -204,7 +203,7 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <span>Envelope</span>
-              <strong>{summariseWaveforms(env.waveforms)}</strong>
+              <strong>{summariseMix(env.mix)}</strong>
             </div>
             <EnvSlider
               label="Attack"
@@ -246,31 +245,34 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
                 dispatch({ type: 'setEnvelope', envelope: { release } })
               }
             />
-            <div className={styles.waves} role="group" aria-label="Waveforms">
+            <div className={styles.waveMix} role="group" aria-label="Waveform mix">
               {WAVEFORMS.map((w) => {
-                const on = env.waveforms.includes(w)
-                // Disable deselect when this is the only one on — we always
-                // need at least one waveform to actually make sound.
-                const onlyOne = on && env.waveforms.length === 1
+                const value = env.mix?.[w] ?? 0
                 return (
-                  <button
-                    key={w}
-                    className={on ? styles.tonicOn : ''}
-                    aria-pressed={on}
-                    aria-label={`${w} waveform`}
-                    disabled={onlyOne}
-                    title={
-                      onlyOne ? 'At least one waveform must stay on' : undefined
-                    }
-                    onClick={() =>
-                      dispatch({
-                        type: 'setEnvelope',
-                        envelope: { waveforms: toggleWaveform(env.waveforms, w) },
-                      })
-                    }
-                  >
-                    {w}
-                  </button>
+                  <div key={w} className={styles.envRow}>
+                    <span className={styles.envLabel}>{w}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={value}
+                      aria-label={`${w} amount`}
+                      onChange={(e) => {
+                        const next = setMixValue(
+                          env.mix,
+                          w,
+                          Number(e.target.value),
+                        )
+                        if (!next) return // would have left everything at 0
+                        dispatch({
+                          type: 'setEnvelope',
+                          envelope: { mix: next },
+                        })
+                      }}
+                    />
+                    <span className={styles.envValue}>{value}%</span>
+                  </div>
                 )
               })}
             </div>
@@ -349,23 +351,29 @@ export function KeyDrawer({ open, onClose }: KeyDrawerProps) {
 }
 
 /**
- * One-line summary for the section-head: "sine" (1), "sine + triangle" (2),
- * "3 waves" (3+). Tabular-nums in the CSS keeps any digit-changes stable.
+ * One-line summary for the section-head: "sine" (1 active), "sine + triangle"
+ * (2), "3 waves" (3+). Counts waveforms with mix > 0.
  */
-function summariseWaveforms(waveforms: Waveform[]): string {
-  if (waveforms.length <= 1) return waveforms[0] ?? ''
-  if (waveforms.length === 2) return `${waveforms[0]} + ${waveforms[1]}`
-  return `${waveforms.length} waves`
+function summariseMix(mix: WaveformMix | undefined): string {
+  const active = WAVEFORMS.filter((w) => (mix?.[w] ?? 0) > 0)
+  if (active.length <= 1) return active[0] ?? ''
+  if (active.length === 2) return `${active[0]} + ${active[1]}`
+  return `${active.length} waves`
 }
 
-/** Add or remove `w` from the list; refuse to leave the list empty. */
-function toggleWaveform(current: Waveform[], w: Waveform): Waveform[] {
-  if (current.includes(w)) {
-    const next = current.filter((x) => x !== w)
-    return next.length > 0 ? next : current
-  }
-  // Keep a stable, predictable order (the canonical WAVEFORMS order).
-  return WAVEFORMS.filter((x) => x === w || current.includes(x))
+/**
+ * Update one waveform's amount in the mix. Returns null when the result
+ * would leave every waveform at 0 (UI should ignore — synth must keep
+ * sounding).
+ */
+function setMixValue(
+  current: WaveformMix | undefined,
+  w: Waveform,
+  value: number,
+): WaveformMix | null {
+  const next: WaveformMix = { ...(current ?? {}), [w]: value }
+  const total = WAVEFORMS.reduce((sum, k) => sum + (next[k] ?? 0), 0)
+  return total > 0 ? next : null
 }
 
 interface EnvSliderProps {
